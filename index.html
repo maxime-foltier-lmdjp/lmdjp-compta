@@ -1,0 +1,2725 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>La Maison des JP — Comptabilité</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏡</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#f9f9f8;--bg2:#f2f1ef;--txt:#1a1a1a;--txt2:#6b6b6b;
+  --brd:#e0ddd8;--brd2:#ccc;--r:10px;
+  --gr-bg:#e8f5e9;--gr-fg:#2e7d32;
+  --am-bg:#fff3e0;--am-fg:#e65100;
+  --rd-bg:#fce4ec;--rd-fg:#c62828;
+  --ac:#1a1a1a;
+  --ia-bg:#fffbeb;--ia-fg:#b45309;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#141413;--bg2:#1e1d1c;--txt:#e8e6e1;--txt2:#888;
+  --brd:#2a2928;--brd2:#555;
+  --gr-bg:#1a2e1a;--gr-fg:#81c784;
+  --am-bg:#2e1e00;--am-fg:#ffb74d;
+  --rd-bg:#2e1010;--rd-fg:#ef9a9a;
+  --ac:#e8e6e1;
+  --ia-bg:#2a1e00;--ia-fg:#fbbf24;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;min-height:100vh}
+h1{font-size:20px;font-weight:600}
+h2{font-size:16px;font-weight:600;margin-bottom:1rem}
+p{margin-bottom:.75rem}
+.container{max-width:1200px;margin:0 auto;padding:1.5rem 1rem}
+.card{background:var(--bg2);border:.5px solid var(--brd);border-radius:var(--r);padding:1.5rem}
+.card-sm{max-width:520px}
+input[type="text"],input[type="date"],input[type="number"],textarea,select,.inp{
+  width:100%;padding:9px 12px;border:.5px solid var(--brd2);border-radius:7px;
+  background:var(--bg);color:var(--txt);font-size:14px;outline:none;font-family:inherit
+}
+input[type="text"]:focus,input[type="date"]:focus,input[type="number"]:focus,textarea:focus,select:focus,.inp:focus{border-color:var(--ac)}
+textarea{resize:vertical;min-height:120px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--ac);color:var(--bg);border:none;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:.1s}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-green{background:#2e7d32;color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:.1s}
+.btn-green:hover{opacity:.85}.btn-green:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:transparent;color:var(--txt2);border:.5px solid var(--brd2);border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit;transition:.1s}
+.btn-ghost:hover{border-color:var(--ac);color:var(--txt)}.btn-ghost:disabled{opacity:.4;cursor:not-allowed}
+.upload-zone{border:1.5px dashed var(--brd2);border-radius:var(--r);padding:3rem;text-align:center;cursor:pointer;transition:.15s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--ac)}
+.notice{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;line-height:1.5}
+.notice-gr{background:var(--gr-bg);color:var(--gr-fg)}
+.notice-am{background:var(--am-bg);color:var(--am-fg)}
+.notice-rd{background:var(--rd-bg);color:var(--rd-fg)}
+.notice-ia{background:var(--ia-bg);color:var(--ia-fg)}
+/* Step nav */
+.step-nav{display:flex;border:.5px solid var(--brd);border-radius:var(--r);overflow:hidden;margin-bottom:1.5rem}
+.step-item{flex:1;padding:10px 6px;text-align:center;font-size:11px;font-weight:500;border-right:.5px solid var(--brd);transition:.1s;color:var(--txt2);line-height:1.3;user-select:none}
+.step-item:last-child{border-right:none}
+.step-item.active{background:var(--ac);color:var(--bg)}
+.step-item.done{background:var(--gr-bg);color:var(--gr-fg);cursor:pointer}
+.step-item.done:hover{opacity:.85}
+.step-item.skip{background:var(--bg2);color:var(--txt2);cursor:pointer;opacity:.7}
+/* Table */
+.tbl-wrap{overflow-x:auto;border:.5px solid var(--brd);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:860px}
+th{padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--txt2);white-space:nowrap;border-bottom:.5px solid var(--brd);background:var(--bg2);position:sticky;top:0;z-index:1}
+td{padding:5px 8px;border-bottom:.5px solid var(--brd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.sel-inline{width:100%;padding:3px 5px;border:.5px solid var(--brd2);border-radius:4px;background:var(--bg);color:var(--txt);font-size:11px;font-family:inherit}
+.inp-inline{width:100%;padding:3px 5px;border:.5px solid transparent;border-radius:4px;background:transparent;color:var(--txt);font-size:11px;font-family:inherit}
+.inp-inline:focus{border-color:var(--brd2);outline:none;background:var(--bg)}
+/* Badges */
+.badge{padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;white-space:nowrap;letter-spacing:.02em}
+.badge-auto{background:var(--gr-bg);color:var(--gr-fg)}
+.badge-partial{background:var(--am-bg);color:var(--am-fg)}
+.badge-manual{background:var(--rd-bg);color:var(--rd-fg)}
+.badge-ia{background:var(--ia-bg);color:var(--ia-fg)}
+/* Accordion */
+.accordion-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);color:var(--txt);border:.5px solid var(--brd);border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;font-size:14px;font-weight:500;transition:.1s;margin-bottom:4px}
+.accordion-btn:hover{background:var(--bg)}
+.accordion-btn.gr{background:var(--gr-bg);color:var(--gr-fg);border-color:var(--gr-fg)}
+.accordion-btn.am{background:var(--am-bg);color:var(--am-fg);border-color:var(--am-fg)}
+.accordion-btn.rd{background:var(--rd-bg);color:var(--rd-fg);border-color:var(--rd-fg)}
+/* Ventilation */
+.vent-badge{padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:var(--gr-bg);color:var(--gr-fg);cursor:pointer;border:none;font-family:inherit}
+/* Chat */
+.chat-wrap{max-height:380px;overflow-y:auto;border:.5px solid var(--brd);border-radius:8px;padding:1rem;display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem;background:var(--bg)}
+.msg{padding:10px 14px;border-radius:10px;max-width:85%;font-size:13px;line-height:1.5}
+.msg-user{align-self:flex-end;background:var(--ac);color:var(--bg);border-radius:10px 10px 2px 10px}
+.msg-ai{align-self:flex-start;background:var(--bg2);border:.5px solid var(--brd);border-radius:10px 10px 10px 2px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem}
+.modal{background:var(--bg);border-radius:var(--r);padding:1.5rem;width:min(95vw,680px);max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+.modal-wide{width:min(95vw,860px)}
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--brd);border-top-color:currentColor;border-radius:50%;animation:spin .8s linear infinite}
+/* Tooltip */
+.tt{position:relative;display:inline-flex;align-items:center;cursor:help}
+.tt:hover .tt-box{display:block}
+.tt-box{display:none;position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:#222;color:#eee;font-size:11px;padding:5px 9px;border-radius:5px;z-index:20;width:220px;white-space:normal;line-height:1.4;pointer-events:none}
+/* Helpers */
+.flex{display:flex;align-items:center;gap:.75rem}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.flex-wrap{flex-wrap:wrap}
+.mt-1{margin-top:.5rem}.mt-2{margin-top:1rem}.mt-3{margin-top:1.5rem}
+.mb-1{margin-bottom:.5rem}.mb-2{margin-bottom:1rem}.mb-3{margin-bottom:1.5rem}
+label{font-size:13px;font-weight:500;display:block;margin-bottom:.35rem;color:var(--txt2)}
+.stat-box{background:var(--bg);border:.5px solid var(--brd);border-radius:8px;padding:12px 16px;flex:1;min-width:100px}
+.stat-lbl{font-size:11px;color:var(--txt2);margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:700}
+.rib-notice{background:var(--am-bg);border:.5px solid var(--am-fg);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:var(--am-fg)}
+</style>
+</head>
+<body>
+<div id="root"><p style="padding:4rem;text-align:center;color:#888">Chargement…</p></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const LS_DATE = 'lmdjp_last_date';
+const LS_URL  = 'lmdjp_script_url';
+const LS_KEY  = 'lmdjp_api_key';
+const SHEET_ID  = '1kkK7F3OxQs1lVUnBZqBpX1ZxABN38seb2wmsSmH5Sgo';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}`;
+const SAUM_RIB  = 'FR76 1759 8000 0100 0003 5168 827';
+
+// ─── TAXONOMY ─────────────────────────────────────────────────────────────────
+
+const TAXONOMY = {
+  "Flux financiers associés":{ color:"#CFE2F3", cat2:{
+    "Apports initiaux":             ["Machi","Alex","Rac","Hecto","Saum","Bachi"],
+    "Apports périodiques":          ["Machi","Alex","Rac","Hecto","Saum","Bachi"],
+    "Avances d'associés (CCA)":     ["Machi","Alex","Rac","Hecto","Saum","Bachi"],
+    "Appels de fonds exceptionnels":["Machi","Alex","Rac","Hecto","Saum","Bachi"],
+  }},
+  "Achats et frais initiaux":{ color:"#FCE5CD", cat2:{
+    "Création de la SCI":[],"Achat initial de la maison":[],
+  }},
+  "Charges et frais courants":{ color:"#FFF2CC", cat2:{
+    "Taxes et impôts":["Taxe d'habitation","Taxe foncière","Déchetterie & Ramassage des ordures","Eau et assainissement","Autres taxes et impôts"],
+    "Assurances":["Assurance habitation","Assurance du véhicule","Autres assurances"],
+    "Consommables":["Bois de chauffe","Gaz bouteille cuisine","EDF - Electricité","Péage et essence du véhicule","Charbon de bois","Autres consommables"],
+    "Administratif et abonnements":["Internet","Frais bancaires","Frais juridiques","Autres frais administratifs"],
+    "Autres charges":["Ramonage","Achats de végétaux et consommables jardin","Autres charges"],
+    "JPP et événements":["JPP1","JPP2","JPP3","JPP4","JPP5","JPP6","JPP7","JPP8","JPP9","JPP10"],
+  }},
+  "Travaux et investissements":{ color:"#D9EAD3", cat2:{
+    "Outils et quincaillerie":["Outils non spécifiques à un chantier","Quincaillerie générale"],
+    "Plomberie":["Commande plomberie initiale","Autres travaux plomberie"],
+    "Électricité":["Commande électricité initiale","Autres travaux électricité"],
+    "Chauffage et flux":["Radiateurs","Poêle à bois","VMC","Travaux cheminées","Autres travaux chauffage et flux"],
+    "Fenêtres et ouvertures":["Fenêtres standards","Baie vitrée de l'entrée","Ouverture de nouvelles fenêtres et Velux","Autres travaux fenêtres et ouvertures"],
+    "Toiture":["Travaux de maintenance","Gros entretien","Réfection complète","Autres travaux de toiture"],
+    "Façades extérieures":["Murs en pierres apparentes","Murs enduits ou crépis","Isolation par l'extérieur","Autres travaux façades extérieures"],
+    "Véhicule":["Achat ou remplacement","Carte grise et démarches","Réparations et entretien"],
+    "Jardin":["Haie","Tracteur et matériel spécifique","Terrasse","Terrain de pétanque","Salon extérieur et aménagements extérieurs","Piscine","Autres travaux jardin"],
+    "Pièces annexes":["Atelier","Garage","Cave","Autres travaux pièces annexes"],
+    "Zone de vie RDC":["Cuisine - Cagibi - WC","Buanderie","Salon","Entrée","Autres travaux zone de vie RDC"],
+    "Zone de vie 1er":["Chambre outils","Chambre bonbez","Chambre bleue","Chambre jaune","Salle de bain","Couloir","Autres travaux chambres"],
+    "Grange":["Isolation du toit","Dalle béton et sol","Murs et création d'ouvertures","Chambre du haut","Autres travaux grange"],
+    "Ameublement de base":["Achats mobilier et déco divers","Frais de récupération"],
+    "Autres travaux":["Autres travaux"],
+  }},
+};
+
+const CAT1_LIST = Object.keys(TAXONOMY);
+const getCat2List = (c1) => c1 ? Object.keys(TAXONOMY[c1]?.cat2 || {}) : [];
+const getCat3List = (c1, c2) => c1 && c2 ? (TAXONOMY[c1]?.cat2?.[c2] || []) : [];
+
+// ─── ASSOCIÉS ─────────────────────────────────────────────────────────────────
+
+const ASSOCIES = {
+  'Machi': { nom:'Maxime Foltier',   aliases:['FOLTIER','MAXIME FOLTIER','MACHI',' MAX ','MAX FOLTIER'] },
+  'Alex':  { nom:'Alexis Challande', aliases:['CHALLANDE','ALEXIS CHALLANDE','ALEXIS','ALEX '] },
+  'Rac':   { nom:'Raphaël Benizio',  aliases:['BENIZIO','RAPHAEL BENIZIO','M BENIZIO','RAPHAËL','RAPHAEL',' RAC ','RAC ','RAPH '] },
+  'Bachi': { nom:'Hugo Bacry',       aliases:['BACRY','HUGO BACRY','BABAK','BABACK',' BACHI ','BACHI '] },
+  'Hecto': { nom:'Hector Monin',     aliases:['MONIN','HECTOR MONIN','HECTOR',' HECTO ','HECTO '] },
+  'Saum':  { nom:'Simon Goutal',     aliases:['GOUTAL','SIMON GOUTAL','MR GOUTAL',' SAUM ','SAUM ','SAUMON'] },
+};
+
+// ─── AUTO-CATÉGORISATION ─────────────────────────────────────────────────────
+// Rules faithfully reproduced from validated v10 session
+
+function autoCatRow(row) {
+  const lib   = (row.libelle       || '').toUpperCase();
+  const cont  = (row.contrepartie  || '').toUpperCase();
+  const type  = (row.type          || '').toUpperCase();
+  const txt   = lib + ' ' + cont;
+  const amt   = row.montant || 0;
+
+  // ── FLUX ASSOCIÉS ────────────────────────────────────────────────────────
+  if (amt > 0) {
+    const EXCL = ['RBST','REMBOURSEMENT','PARTICIPATION','JPP','PIANO',
+                  'PETANQUE','PÉTANQUE','ACHAT','FACTURE','CONTRIBUTION','AVOIR'];
+    if (!EXCL.some(k => txt.includes(k))) {
+      const contWords = [cont.trim()];
+      for (const [pseudo, info] of Object.entries(ASSOCIES)) {
+        const kws = info.aliases;
+        if (kws.some(k => (' ' + txt + ' ').includes(' ' + k.trim() + ' ')) ||
+            contWords.some(w => kws.some(k => w === k.trim().replace(/ /g,'')))) {
+          let cat2, source;
+          if (Math.round(amt) === 200) {
+            cat2 = "Apports périodiques"; source = 'auto';
+          } else if (amt > 2000) {
+            cat2 = "Avances d'associés (CCA)"; source = 'partial';
+          } else {
+            cat2 = ""; source = 'partial';
+          }
+          return { cat1:"Flux financiers associés", cat2, cat3:pseudo, source };
+        }
+      }
+    }
+  }
+
+  // ── FRAIS SHINE ──────────────────────────────────────────────────────────
+  if (type === 'COMMISSION' || cont === 'SHINE' || cont.includes('SHINE')) {
+    return { cat1:"Charges et frais courants", cat2:"Administratif et abonnements",
+             cat3:"Frais bancaires", source:'auto', shinePrefix:true };
+  }
+
+  // ── EDF / ENEDIS ─────────────────────────────────────────────────────────
+  if (cont.includes('EDF') || cont.includes('ENEDIS')) {
+    return { cat1:"Charges et frais courants", cat2:"Consommables",
+             cat3:"EDF - Electricité", source:'auto' };
+  }
+
+  // ── ORANGE / LIVEBOX ─────────────────────────────────────────────────────
+  if (cont.includes('ORANGE') || lib.includes('LIVEBOX')) {
+    return { cat1:"Charges et frais courants", cat2:"Administratif et abonnements",
+             cat3:"Internet", source:'auto' };
+  }
+
+  // ── SGC AUXERRE / DÉCHETTERIE ────────────────────────────────────────────
+  if (cont.includes('SGC') || lib.includes('RAMASSAGE ORDURES') || lib.includes('DECHETS')) {
+    return { cat1:"Charges et frais courants", cat2:"Taxes et impôts",
+             cat3:"Déchetterie & Ramassage des ordures", source:'auto' };
+  }
+
+  // ── EAU / ASSAINISSEMENT ─────────────────────────────────────────────────
+  if (txt.includes('EAU ET ASSAINISSEMENT') || cont.includes('TRESORERIE AUXERRE') ||
+      cont.includes('TRÉSORERIE AUXERRE') ||
+      (cont.includes('TRESORERIE') && lib.includes('ASSAINISSEMENT'))) {
+    return { cat1:"Charges et frais courants", cat2:"Taxes et impôts",
+             cat3:"Eau et assainissement", source:'auto' };
+  }
+
+  // ── DGFIP / IMPÔTS ───────────────────────────────────────────────────────
+  if (cont.includes('DGFIP') || cont.includes('DIRECTION GENERALE DES FINANCES') ||
+      cont.includes('DIRECTION GÉNÉRALE DES FINANCES')) {
+    if (lib.includes('FONCI') || lib.includes('IMPOT TF') || lib.includes('IMPÔT TF')) {
+      return { cat1:"Charges et frais courants", cat2:"Taxes et impôts",
+               cat3:"Taxe foncière", source:'auto' };
+    }
+    if (lib.includes('HABITATION') || lib.includes('IMPOT TH') || lib.includes('IMPÔT TH')) {
+      return { cat1:"Charges et frais courants", cat2:"Taxes et impôts",
+               cat3:"Taxe d'habitation", source:'auto' };
+    }
+    return null; // Other DGFIP → À catégoriser
+  }
+
+  // ── ASSURANCES ───────────────────────────────────────────────────────────
+  if (cont.includes('AXA') || cont.includes('ALLIANZ')) {
+    return { cat1:"Charges et frais courants", cat2:"Assurances",
+             cat3:"Assurance habitation", source:'auto' };
+  }
+  if (cont.includes('MAIF') || cont.includes('LOLIVIER') || cont.includes('OLIVIER ASSURANCE')) {
+    return { cat1:"Charges et frais courants", cat2:"Assurances",
+             cat3:"Assurance du véhicule", source:'auto' };
+  }
+
+  // ── PÉAGES ───────────────────────────────────────────────────────────────
+  const TOLLS = ['APRR','SANEF','FULLI','CEREA','VINCI AUTOROUTE','AREA '];
+  if (TOLLS.some(k => cont.includes(k) || lib.includes(k))) {
+    return { cat1:"Charges et frais courants", cat2:"Consommables",
+             cat3:"Péage et essence du véhicule", source:'auto' };
+  }
+
+  // ── TRAVAUX / QUINCAILLERIE (CAT1 uniquement) ───────────────────────────
+  const BRICO = ['LEROY MERLIN','ADEO*LEROY','BRICOMARCHE','BRICOMARCHÉ','BRICORAMA'];
+  if (BRICO.some(k => txt.includes(k))) {
+    return { cat1:"Travaux et investissements", cat2:"", cat3:"", source:'partial' };
+  }
+  if (txt.includes('AMAZON') && amt < 0) {
+    return { cat1:"Travaux et investissements", cat2:"", cat3:"", source:'partial' };
+  }
+
+  return null;
+}
+
+// ─── DATE HELPERS ─────────────────────────────────────────────────────────────
+
+const parseFrAmt = s => parseFloat((s||'').trim().replace(/\s/g,'').replace(',','.')) || 0;
+
+function formatDateFR(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
+function isoToDate(iso) {
+  if (!iso) return null;
+  return new Date(iso + 'T00:00:00');
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0,10);
+}
+
+// ─── GVIZ AUTO-FETCH ─────────────────────────────────────────────────────────
+
+// Parse a gviz cell value to ISO date string
+function parseGvizCell(cell) {
+  if (!cell || cell.v == null) return null;
+  const f = cell.f;
+  if (f) {
+    const dm = f.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dm) return `${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
+    const dm2 = f.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (dm2) return f.slice(0,10);
+  }
+  const v = String(cell.v);
+  const dv = v.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (dv) {
+    return `${dv[1]}-${String(parseInt(dv[2])+1).padStart(2,'0')}-${dv[3].padStart(2,'0')}`;
+  }
+  const dv2 = v.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dv2) return `${dv2[3]}-${dv2[2].padStart(2,'0')}-${dv2[1].padStart(2,'0')}`;
+  return null;
+}
+
+function parseGvizRows(rows) {
+  if (!rows?.length) return null;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const d = parseGvizCell(rows[i]?.c?.[0]);
+    if (d) return d;
+  }
+  return null;
+}
+
+async function fetchLastDateFromGSheet() {
+  // ── Méthode 1 : JSONP via <script> — fonctionne depuis file:// ──────────────
+  const jsonpResult = await new Promise((resolve) => {
+    const cbName = 'gviz_' + Math.random().toString(36).slice(2);
+    const script  = document.createElement('script');
+    let settled   = false;
+
+    const done = (val) => {
+      if (settled) return; settled = true;
+      clearTimeout(timer);
+      delete window[cbName];
+      try { script.parentNode?.removeChild(script); } catch {}
+      resolve(val);
+    };
+
+    window[cbName] = (resp) => {
+      try { done(parseGvizRows(resp?.table?.rows)); }
+      catch { done(null); }
+    };
+
+    const timer = setTimeout(() => done(null), 7000);
+    script.onerror = () => done(null);
+    // gviz responseHandler = JSONP callback name
+    script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&sheet=Journal&range=A:A`;
+    document.head.appendChild(script);
+  });
+
+  if (jsonpResult) return jsonpResult;
+
+  // ── Méthode 2 : fetch classique — fonctionne depuis http:// ─────────────────
+  try {
+    const resp = await fetch(
+      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Journal&range=A:A`,
+      { cache: 'no-store' }
+    );
+    if (!resp.ok) return null;
+    const text = await resp.text();
+    const m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+    if (!m) return null;
+    const data = JSON.parse(m[1]);
+    return parseGvizRows(data?.table?.rows);
+  } catch { return null; }
+}
+
+// ─── BUDGET — COUCHE DATA ───────────────────────────────────────────────────
+
+const SHEET_TABS = {
+  achatsInitiaux: 'Achats initiaux',
+  charges:        'Charges',
+  suiviTravaux:   'Suivi budget travaux',
+  historisation:  'Historisation budgets',
+};
+
+// Normalise un label pour matching (retire émojis, espaces multiples, casse)
+function normLabel(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+// Parse un nombre depuis une cellule gviz ("-67 959,32 €" → -67959.32)
+function parseGvizNumber(cell) {
+  if (!cell) return null;
+  if (typeof cell.v === 'number') return cell.v;
+  if (cell.v == null) return null;
+  const s = String(cell.f || cell.v).replace(/[€\s\u00A0]/g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Fetch générique gviz d'une plage par NOM de feuille, retourne {rows, cols}
+async function fetchGvizRange(sheetName, range) {
+  const enc = encodeURIComponent(sheetName);
+  const jsonp = await new Promise((resolve) => {
+    const cbName = 'gviz_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    let settled = false;
+    const done = (val) => {
+      if (settled) return; settled = true;
+      clearTimeout(timer); delete window[cbName];
+      try { script.parentNode?.removeChild(script); } catch {}
+      resolve(val);
+    };
+    window[cbName] = (resp) => {
+      try { done(resp?.table ? { rows: resp.table.rows||[], cols: resp.table.cols||[] } : null); }
+      catch { done(null); }
+    };
+    const timer = setTimeout(() => done(null), 10000);
+    script.onerror = () => done(null);
+    script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&sheet=${enc}&range=${range}`;
+    document.head.appendChild(script);
+  });
+  if (jsonp) return jsonp;
+  try {
+    const resp = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${enc}&range=${range}`, { cache:'no-store' });
+    if (!resp.ok) return null;
+    const text = await resp.text();
+    const m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+    if (!m) return null;
+    const t = JSON.parse(m[1])?.table;
+    return t ? { rows: t.rows||[], cols: t.cols||[] } : null;
+  } catch { return null; }
+}
+
+// Projection des charges sur 11 ans (2022→2032 inclus)
+function computeChargesProjection(annualTotals, inflationRate, todayISO) {
+  const years = Object.keys(annualTotals).map(Number).sort((a,b)=>a-b);
+  if (!years.length) return null;
+  const firstYear = years[0];
+  const today = new Date(todayISO);
+  const curYear = today.getFullYear();
+
+  const pastYears = years.filter(y => y < curYear);
+  const realPast = pastYears.reduce((s,y)=>s+Math.abs(annualTotals[y]||0), 0);
+
+  const fullYears = years.filter(y => y !== firstYear && y < curYear);
+  const avgFullYear = fullYears.length
+    ? fullYears.reduce((s,y)=>s+Math.abs(annualTotals[y]||0),0) / fullYears.length : 0;
+
+  const endYear = firstYear + 10;
+  const i = inflationRate / 100;
+  const endOfYear = new Date(curYear, 11, 31);
+  const startOfYear = new Date(curYear, 0, 1);
+  const fracRemaining = (endOfYear - today) / (endOfYear - startOfYear);
+  const lastFullYear = fullYears.length ? fullYears[fullYears.length-1] : firstYear;
+
+  const detail = [];
+  let projected = 0;
+  for (let y = curYear; y <= endYear; y++) {
+    let amount = avgFullYear * Math.pow(1+i, y - lastFullYear);
+    if (y === curYear) amount *= fracRemaining;
+    projected += amount;
+    detail.push({ year:y, amount:Math.round(amount), prorata: y===curYear ? fracRemaining : 1 });
+  }
+
+  return {
+    realPast: Math.round(realPast),
+    avgFullYear: Math.round(avgFullYear),
+    fullYears, pastYears,
+    projected: Math.round(projected),
+    total: Math.round(realPast + projected),
+    detail, horizon: [firstYear, endYear],
+  };
+}
+
+// Back-calcul du taux d'inflation pour atteindre un total cible (dichotomie)
+function solveInflationForTotal(annualTotals, targetTotal, todayISO) {
+  let lo = -20, hi = 50;
+  for (let iter = 0; iter < 60; iter++) {
+    const mid = (lo + hi) / 2;
+    const t = computeChargesProjection(annualTotals, mid, todayISO)?.total ?? 0;
+    if (Math.abs(t - targetTotal) < 1) return Math.round(mid*100)/100;
+    if (t < targetTotal) lo = mid; else hi = mid;
+  }
+  return Math.round(((lo+hi)/2)*100)/100;
+}
+
+// Charge toutes les données budget en parallèle
+async function fetchBudgetData() {
+  const results = await Promise.allSettled([
+    fetchGvizRange(SHEET_TABS.achatsInitiaux, 'C13'),
+    fetchGvizRange(SHEET_TABS.charges, 'C34:H35'),
+    fetchGvizRange(SHEET_TABS.suiviTravaux, 'B5:C78'),
+    fetchGvizRange(SHEET_TABS.historisation, 'B1:CE2'),
+    fetchGvizRange(SHEET_TABS.historisation, 'A3:CE79'),
+  ]);
+  const vals = results.map(r => r.status === 'fulfilled' ? r.value : null);
+  const achatsRows    = vals[0]?.rows;
+  const chargesRows   = vals[1]?.rows;   const chargesCols = vals[1]?.cols;
+  const suiviRows     = vals[2]?.rows;
+  const histHeaderRows= vals[3]?.rows;   const histHeaderCols = vals[3]?.cols;
+  const histDataRows  = vals[4]?.rows;
+
+  const labels = ['Achats initiaux', 'Charges', 'Suivi travaux', 'Historisation (entêtes)', 'Historisation (détail)'];
+  const failed = vals.map((v,i) => (!v || !v.rows) ? labels[i] : null).filter(Boolean);
+  if (failed.length) console.warn('Budget fetch — onglets sans données :', failed.join(', '));
+
+  // 1. Achats initiaux (C13)
+  const achatsInitiaux = Math.abs(parseGvizNumber(achatsRows?.[0]?.c?.[0]) || 0);
+
+  // 2. Totaux annuels charges. gviz peut interpréter la 1ère ligne comme en-tête :
+  //    on lit donc les années depuis table.cols (label) ET depuis les rows en fallback.
+  const annualTotals = {};
+  if (chargesRows?.length) {
+    // Cas A : 2 lignes (années + montants)
+    if (chargesRows.length >= 2) {
+      const yearRow = chargesRows[0].c;
+      const valRow  = chargesRows[1].c;
+      for (let j = 1; j < yearRow.length; j++) {
+        const year = parseInt(parseGvizNumber(yearRow[j]));
+        const val  = parseGvizNumber(valRow[j]);
+        if (year && val != null) annualTotals[year] = val;
+      }
+    }
+    // Cas B : 1 seule ligne (gviz a pris les années comme en-tête → chargesCols)
+    if (!Object.keys(annualTotals).length && chargesCols?.length) {
+      const valRow = chargesRows[chargesRows.length - 1].c;
+      for (let j = 1; j < chargesCols.length; j++) {
+        const year = parseInt(String(chargesCols[j]?.label || '').replace(/\D/g,''));
+        const val  = parseGvizNumber(valRow[j]);
+        if (year >= 2020 && year <= 2040 && val != null) annualTotals[year] = val;
+      }
+    }
+  }
+
+  // 3. Détection du dernier budget (ligne 1 de l'historisation)
+  let lastBudgetColIdx = -1, lastBudgetName = '';
+  const headerRow1 = histHeaderRows?.[0]?.c || [];
+  for (let j = headerRow1.length - 1; j >= 0; j--) {
+    const v = headerRow1[j]?.v;
+    if (v && String(v).trim()) { lastBudgetColIdx = j; lastBudgetName = String(v).trim(); break; }
+  }
+
+  // 4. Lignes de l'historisation (A3:CE79). col A=0=label, montant = lastBudgetColIdx+1
+  let montantCol = lastBudgetColIdx + 1;
+
+  // Validation : la ligne apports doit avoir un montant > 0 à montantCol.
+  // Si non (décalage gviz, cellules omises…), on cherche la dernière colonne
+  // non vide de la ligne apports comme colonne montant de secours.
+  const apportsRowProbe = (histDataRows || []).find(r => /apports associes/i.test(normLabel(r.c?.[0]?.v)));
+  if (apportsRowProbe) {
+    const atCol = parseGvizNumber(apportsRowProbe.c?.[montantCol]);
+    if (!atCol) {
+      // chercher la dernière cellule numérique > 0 de la ligne apports
+      for (let j = apportsRowProbe.c.length - 1; j >= 1; j--) {
+        const v = parseGvizNumber(apportsRowProbe.c[j]);
+        if (v && Math.abs(v) > 0) { montantCol = j; break; }
+      }
+    }
+  }
+
+  const lastBudget = {};
+  const lastBudgetOrder = [];
+  const structural = {};
+  (histDataRows || []).forEach((row) => {
+    const label = row.c?.[0]?.v;
+    if (!label) return;
+    const montant = Math.abs(parseGvizNumber(row.c?.[montantCol]) || 0);
+    const nl = normLabel(label);
+    const entry = { label: String(label).trim(), montant };
+    lastBudget[nl] = entry;
+    lastBudgetOrder.push(entry);
+    if (/apports associes/i.test(nl)) structural.apports = montant;
+    else if (/achats et frais initiaux/i.test(nl)) structural.achatsHist = montant;
+    else if (/charges et frais courants/i.test(nl)) structural.charges = montant;
+    else if (/budget estimatif a rep[ae]rtir/i.test(nl)) structural.budgetEstimatif = montant;
+  });
+
+  // 5. Réel consommé (Suivi budget travaux B5:C78)
+  const realByLabel = {};
+  (suiviRows || []).forEach((row) => {
+    const label = row.c?.[0]?.v;
+    if (!label) return;
+    const real = Math.abs(parseGvizNumber(row.c?.[1]) || 0);
+    realByLabel[normLabel(label)] = real;
+  });
+
+  return {
+    ok: failed.length === 0,
+    failed,
+    debug: {
+      achatsRowsLen: achatsRows?.length ?? 'null',
+      chargesRowsLen: chargesRows?.length ?? 'null',
+      suiviRowsLen: suiviRows?.length ?? 'null',
+      histHeaderLen: histHeaderRows?.length ?? 'null',
+      histDataLen: histDataRows?.length ?? 'null',
+      annualYears: Object.keys(annualTotals),
+      budgetLines: lastBudgetOrder.length,
+      lastBudgetName, lastBudgetColIdx,
+      structural: { apports: structural.apports, achats: structural.achatsHist, charges: structural.charges, budgetEstim: structural.budgetEstimatif },
+    },
+    achatsInitiaux: achatsInitiaux || structural.achatsHist || 0,
+    annualTotals,
+    apports: structural.apports || 0,
+    lastChargesEstimate: structural.charges || 0,
+    lastBudgetName, lastBudgetColIdx,
+    lastBudget, lastBudgetOrder, realByLabel,
+    structural,
+  };
+}
+
+// ─── CSV PARSING ──────────────────────────────────────────────────────────────
+
+function parseShineCSV(text) {
+  const result = Papa.parse(text.trim(), { delimiter:';', header:true, skipEmptyLines:true });
+  if (!result.data?.length) throw new Error('CSV vide ou mal formaté');
+
+  const hdr = result.meta.fields || [];
+  const col = (...pats) => {
+    for (const p of pats) {
+      const pl = p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+      const h = hdr.find(h => {
+        const hl = h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+        return hl.includes(pl);
+      });
+      if (h) return h;
+    }
+    return null;
+  };
+
+  const dateCol  = col('Date de la valeur','datevaleur') || col("Date d'opération",'dateoperation','date');
+  const libCol   = col('Libellé','libelle','label','description','reference');
+  const contCol  = col('Nom de la contrepartie','contrepartie','beneficiaire','tiers','nomcontrepartie');
+  const debitCol = col('Débit','debit');
+  const creditCol= col('Crédit','credit');
+  const typeCol  = col('Type de transaction','type');
+
+  if (!dateCol) throw new Error('Colonne date introuvable. Headers: ' + hdr.join(', '));
+
+  return result.data.map((row, idx) => {
+    const dateRaw = (row[dateCol] || '').trim();
+    let dateISO = '';
+    const dm = dateRaw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dm) dateISO = `${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
+    else if (/^\d{4}-\d{2}-\d{2}/.test(dateRaw)) dateISO = dateRaw.slice(0,10);
+
+    const debit  = parseFrAmt(debitCol  ? row[debitCol]  : '0');
+    const credit = parseFrAmt(creditCol ? row[creditCol] : '0');
+    const montant = credit > 0 ? credit : -debit;
+
+    const libBrut = libCol  ? (row[libCol]  || '').trim() : '';
+    const contRaw = contCol ? (row[contCol] || '').trim() : '';
+
+    return {
+      id:           `row-${idx}`,
+      date:         dateISO,
+      libelle:      libBrut,
+      libelleBrut:  libBrut,
+      contrepartie: contRaw,
+      montant,
+      type:         typeCol ? (row[typeCol] || '').trim() : '',
+      cat1:'', cat2:'', cat3:'',
+      nFacture:'', commentaire:'',
+      source:'manual',
+      iaSuggestion:null,
+      shinePrefix:false,
+      ventilations:null,
+    };
+  });
+}
+
+function buildRows(txs, matchings = []) {
+  const matchMap = {};
+  (matchings || []).forEach(m => { matchMap[m.transactionId] = m; });
+  return txs.map(t => {
+    const cat = autoCatRow(t);
+    const ai  = matchMap[t.id];
+    let row = { ...t };
+    if (cat) {
+      row = { ...row, cat1:cat.cat1||'', cat2:cat.cat2||'', cat3:cat.cat3||'',
+               source:cat.source||'auto', shinePrefix:cat.shinePrefix||false };
+      if (cat.shinePrefix) row.libelle = `Shine — ${t.libelleBrut}`;
+    } else if (ai && !row.cat1) {
+      row = { ...row, cat1:ai.cat1||'', cat2:ai.cat2||'', cat3:ai.cat3||'',
+               source:'ia', iaSuggestion:ai.contexte||null };
+    }
+    return row;
+  });
+}
+
+// Section of a row: auto | partial | manual
+function getSection(row) {
+  if (!row.cat1) return 'manual';
+  const c3opts = getCat3List(row.cat1, row.cat2);
+  if (!row.cat2 || (c3opts.length > 0 && !row.cat3)) return 'partial';
+  return 'auto';
+}
+// Classification pour la révision — valide chaque niveau contre la taxonomie réelle
+function getRevSection(row) {
+  // Ventilé = complet
+  if (row.ventilations && row.ventilations.length > 0) return row.source === 'ia' ? 'ia' : 'auto';
+  // CAT1 doit être une entrée valide
+  if (!row.cat1 || !CAT1_LIST.includes(row.cat1)) return 'manual';
+  // CAT2 doit être valide dans cette CAT1
+  const c2list = getCat2List(row.cat1);
+  if (!row.cat2 || !c2list.includes(row.cat2)) return 'manual';
+  // CAT3 : si des options existent, l'une doit être sélectionnée et valide
+  const c3list = getCat3List(row.cat1, row.cat2);
+  if (c3list.length > 0 && (!row.cat3 || !c3list.includes(row.cat3))) return 'manual';
+  return row.source === 'ia' ? 'ia' : 'auto';
+}
+
+// Sort: positives first, then negatives, chronological within
+function sortRows(arr) {
+  return [
+    ...arr.filter(r => r.montant >= 0).sort((a,b) => a.date.localeCompare(b.date)),
+    ...arr.filter(r => r.montant <  0).sort((a,b) => a.date.localeCompare(b.date)),
+  ];
+}
+
+// ─── CLAUDE API ───────────────────────────────────────────────────────────────
+
+async function callClaude(apiKey, messages, system = '', maxTokens = 2000) {
+  const body = { model:'claude-sonnet-4-6', max_tokens:maxTokens, messages };
+  if (system) body.system = system;
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body:JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const e = await resp.json().catch(()=>({}));
+    throw new Error(e?.error?.message || `Erreur API ${resp.status}`);
+  }
+  const data = await resp.json();
+  return data.content?.[0]?.text || '';
+}
+
+// ─── TRAVAUX OPTIONS (for ChantierModal) ─────────────────────────────────────
+
+const TRAVAUX_OPTS = (() => {
+  const opts = [];
+  Object.entries(TAXONOMY['Travaux et investissements'].cat2).forEach(([cat2, cat3s]) => {
+    if (cat3s.length === 0) {
+      opts.push({ key:`${cat2}|`, cat2, cat3:'', label:cat2 });
+    } else {
+      cat3s.forEach(cat3 => opts.push({ key:`${cat2}|${cat3}`, cat2, cat3, label:`${cat2} › ${cat3}` }));
+    }
+  });
+  return opts;
+})();
+
+// ─── PASSE A : appliquer les matchings IA explicites ─────────────────────────
+
+function applyPasseA(rows, matchings) {
+  const mm = {};
+  // Guard: matchings must be an array
+  const list = Array.isArray(matchings) ? matchings : [];
+  list.forEach(m => {
+    if (m && m.transactionId) mm[String(m.transactionId)] = m;
+  });
+  return rows.map(row => {
+    const match = mm[String(row.id)];
+    if (!match) return row;
+    // ── Protéger les lignes déjà parfaitement catégorisées par les règles auto ──
+    if (row.source === 'auto' && getSection(row) === 'auto') return row;
+    const vents = Array.isArray(match.ventilations) ? match.ventilations : [];
+    if (!vents.length) return row;
+    // Coerce all IA-provided strings to ensure no object ends up in JSX
+    const str = v => (v == null || typeof v === 'object') ? '' : String(v);
+    const pct0 = Number(vents[0].pct);
+    if (vents.length === 1 && (isNaN(pct0) || pct0 >= 95)) {
+      // Catégorisation unique
+      return { ...row,
+        cat1:'Travaux et investissements',
+        cat2: str(vents[0].cat2),
+        cat3: str(vents[0].cat3),
+        libelle: str(vents[0].libelle) || row.libelle,
+        source:'ia', iaSuggestion: str(match.contexte), ventilations:null };
+    }
+    // Ventilation multi-lignes
+    const appVents = vents.map(v => ({
+      montant: parseFloat((Math.abs(row.montant) * (Number(v.pct)||0) / 100).toFixed(2)) * (row.montant<0?-1:1),
+      libelle: str(v.libelle) || row.libelle,
+      cat1:'Travaux et investissements', cat2: str(v.cat2), cat3: str(v.cat3),
+    }));
+    // Correction arrondi sur dernière ligne
+    const diff = parseFloat((row.montant - appVents.reduce((s,v)=>s+v.montant,0)).toFixed(2));
+    if (Math.abs(diff) > 0.004 && appVents.length)
+      appVents[appVents.length-1].montant = parseFloat((appVents[appVents.length-1].montant + diff).toFixed(2));
+    return { ...row, source:'ia', ventilations:appVents, iaSuggestion: str(match.contexte) };
+  });
+}
+
+// ─── PASSE B : ventilation automatique des lignes "partial" ──────────────────
+
+function applyPasseB(rows, chantiers) {
+  if (!chantiers || !chantiers.length) return rows;
+  return rows.map(row => {
+    // Seulement les lignes partielles non encore traitées par l'IA
+    if (getSection(row) !== 'partial' || row.source === 'ia') return row;
+    if (chantiers.length === 1) {
+      return { ...row,
+        cat2:chantiers[0].cat2, cat3:chantiers[0].cat3,
+        source:'ia',
+        iaSuggestion:`Ventilé auto : ${chantiers[0].cat2}${chantiers[0].cat3?' › '+chantiers[0].cat3:''}` };
+    }
+    const appVents = chantiers.map(c => ({
+      montant: parseFloat((Math.abs(row.montant) * c.pct / 100).toFixed(2)) * (row.montant<0?-1:1),
+      libelle: row.libelle,
+      cat1:'Travaux et investissements', cat2:c.cat2, cat3:c.cat3,
+    }));
+    const diff = parseFloat((row.montant - appVents.reduce((s,v)=>s+v.montant,0)).toFixed(2));
+    if (Math.abs(diff) > 0.004 && appVents.length) appVents[appVents.length-1].montant = parseFloat((appVents[appVents.length-1].montant + diff).toFixed(2));
+    return { ...row, source:'ia', ventilations:appVents, iaSuggestion:'Ventilé selon les chantiers en cours' };
+  });
+}
+
+// ─── SETTINGS MODAL ───────────────────────────────────────────────────────────
+
+function SettingsModal({ onClose }) {
+  const [key, setKey] = useState(() => localStorage.getItem(LS_KEY) || '');
+  const [url, setUrl] = useState(() => localStorage.getItem(LS_URL) || '');
+  const save = () => {
+    localStorage.setItem(LS_KEY, key.trim());
+    localStorage.setItem(LS_URL, url.trim());
+    onClose();
+  };
+  return (
+    <div className="modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="flex-between mb-3"><h2 style={{marginBottom:0}}>⚙️ Paramètres</h2>
+          <button className="btn-ghost" onClick={onClose}>✕</button></div>
+        <div className="mb-2">
+          <label>Clé API Anthropic (Claude)</label>
+          <input type="text" value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-ant-api03-…"/>
+          <div style={{fontSize:11,color:'var(--txt2)',marginTop:4}}>Stockée uniquement dans ce navigateur.</div>
+        </div>
+        <div className="mb-2">
+          <label>URL Google Apps Script (doPost)</label>
+          <input type="text" value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://script.google.com/macros/s/…/exec"/>
+        </div>
+        <div className="mb-3"><label>Google Sheet</label>
+          <a href={SHEET_URL} target="_blank" rel="noreferrer" style={{fontSize:12,color:'var(--ac)'}}>Ouvrir ↗</a></div>
+        <div className="flex" style={{justifyContent:'flex-end',gap:'.5rem'}}>
+          <button className="btn-ghost" onClick={onClose}>Annuler</button>
+          <button className="btn-green" onClick={save}>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STEP NAV ─────────────────────────────────────────────────────────────────
+
+const STEPS = [{n:1,e:'📅',l:'Date'},{n:2,e:'📥',l:'CSV'},{n:3,e:'💬',l:'Contexte'},
+               {n:4,e:'💸',l:'Rembt.'},{n:5,e:'✏️',l:'Révision'},{n:6,e:'🚀',l:'Export'}];
+
+function StepNav({ step, ss, onGo }) {
+  return (
+    <div className="step-nav">
+      {STEPS.map(({n,e,l}) => {
+        const st = n===step ? 'active' : (ss[n]||'todo');
+        return <div key={n} className={`step-item ${st}`}
+          onClick={() => (st==='done'||st==='skip') && onGo(n)}>
+          <div style={{fontSize:16}}>{e}</div><div>{l}</div></div>;
+      })}
+    </div>
+  );
+}
+
+// ─── STEP 1: DATE D'ARRÊT ────────────────────────────────────────────────────
+
+function Step1({ onNext }) {
+  const [date,    setDate]    = useState(() => localStorage.getItem(LS_DATE) || '');
+  const [loading, setLoading] = useState(false);
+  const [source,  setSource]  = useState('local'); // 'local' | 'sheet' | 'error'
+
+  useEffect(() => {
+    setLoading(true);
+    fetchLastDateFromGSheet().then(d => {
+      if (d) { setDate(d); setSource('sheet'); localStorage.setItem(LS_DATE, d); }
+      else setSource(date ? 'local' : 'error');
+      setLoading(false);
+    });
+  }, []);
+
+  const go = () => { if (!date) return; localStorage.setItem(LS_DATE, date); onNext(date); };
+
+  return (
+    <div className="card card-sm">
+      <h2>📅 Date d'arrêt</h2>
+      <p style={{color:'var(--txt2)',fontSize:13}}>
+        Dernière date déjà saisie dans le Journal. Les transactions postérieures seront importées.
+      </p>
+      {loading ? (
+        <div className="notice" style={{color:'var(--txt2)'}}><span className="spin"/> Lecture du Google Sheet…</div>
+      ) : source === 'sheet' ? (
+        <div className="notice notice-gr mb-1">✓ Date lue depuis Google Sheet : <strong>{formatDateFR(date)}</strong></div>
+      ) : source === 'local' && date ? (
+        <div className="notice notice-ia mb-1">📌 Date mémorisée localement (Sheet inaccessible). Vérifie&nbsp;
+          <a href={SHEET_URL} target="_blank" rel="noreferrer" style={{color:'inherit'}}>le sheet ↗</a>
+        </div>
+      ) : (
+        <div className="notice notice-am mb-1">⚠️ Google Sheet inaccessible — saisis la date ci-dessous.</div>
+      )}
+      <div className="mb-3"><label>Date d'arrêt</label>
+        <input type="date" value={date} onChange={e=>{setDate(e.target.value);setSource('manual');}}/></div>
+      <button className="btn" onClick={go} disabled={!date}>Suivant →</button>
+    </div>
+  );
+}
+
+// ─── STEP 2: IMPORT CSV ───────────────────────────────────────────────────────
+
+function Step2({ dateArret, onNext }) {
+  const [drag, setDrag]   = useState(false);
+  const [err,  setErr]    = useState('');
+  const [rows, setRows]   = useState(null);
+  const fileRef = useRef();
+
+  const process = file => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        let parsed = parseShineCSV(e.target.result);
+        const cutoff = isoToDate(dateArret);
+        parsed = parsed.filter(r => { const d=isoToDate(r.date); return d && d > cutoff; });
+        if (!parsed.length) { setErr(`Aucune transaction après le ${formatDateFR(dateArret)}.`); setRows(null); return; }
+        setErr(''); setRows(parsed);
+      } catch(ex) { setErr('Erreur : ' + ex.message); setRows(null); }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const autoCount = rows ? buildRows(rows).filter(r => r.source==='auto').length : 0;
+
+  return (
+    <div className="card">
+      <h2>📥 Import CSV Shine</h2>
+      <p style={{color:'var(--txt2)',fontSize:13}}>Transactions après le <strong>{formatDateFR(dateArret)}</strong>.
+        Export Shine → Relevé → CSV (séparateur <code>;</code>).</p>
+      <div className={`upload-zone ${drag?'drag':''}`}
+        onDragOver={e=>{e.preventDefault();setDrag(true)}}
+        onDragLeave={()=>setDrag(false)}
+        onDrop={e=>{e.preventDefault();setDrag(false);process(e.dataTransfer.files[0])}}
+        onClick={()=>fileRef.current.click()} style={{marginBottom:'1rem'}}>
+        <div style={{fontSize:32,marginBottom:8}}>📂</div>
+        <div style={{fontWeight:500}}>Glisser le CSV Shine ici</div>
+        <div style={{fontSize:12,color:'var(--txt2)',marginTop:4}}>ou cliquer — fichier .csv séparateur ;</div>
+        <input ref={fileRef} type="file" accept=".csv" style={{display:'none'}} onChange={e=>process(e.target.files[0])}/>
+      </div>
+      {err && <div className="notice notice-rd">⚠️ {err}</div>}
+      {rows && (
+        <>
+          <div className="notice notice-gr">
+            ✓ <strong>{rows.length}</strong> transactions • {autoCount} auto-catégorisées
+          </div>
+          <button className="btn-green" onClick={() => onNext(rows)}>
+            Continuer avec {rows.length} transactions →
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── CHANTIER MODAL ───────────────────────────────────────────────────────────
+
+function ChantierModal({ onValidate, onClose }) {
+  const [lines, setLines] = useState([
+    { cat2:'Outils et quincaillerie', cat3:'Quincaillerie générale', pct:20 }
+  ]);
+
+  const total  = lines.reduce((s,l) => s + (parseInt(l.pct)||0), 0);
+  const isOK   = total === 100;
+
+  const updCat = (i, key) => {
+    const opt = TRAVAUX_OPTS.find(o => o.key === key);
+    if (!opt) return;
+    setLines(p => p.map((l,j) => j===i ? {...l, cat2:opt.cat2, cat3:opt.cat3} : l));
+  };
+
+  const updPct = (i, v) => setLines(p => p.map((l,j) => j===i ? {...l, pct:parseInt(v)||0} : l));
+
+  const add = () => {
+    if (lines.length >= 4) return;
+    setLines(p => [...p, {cat2:'', cat3:'', pct:0}]);
+  };
+
+  const normalize = () => {
+    if (total === 0) return;
+    const newL = lines.map((l,i) => ({
+      ...l, pct: i < lines.length-1 ? Math.round((parseInt(l.pct)||0)*100/total) : 0
+    }));
+    const partial = newL.slice(0,-1).reduce((s,l)=>s+l.pct,0);
+    newL[newL.length-1].pct = 100 - partial;
+    setLines(newL);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <h2 style={{marginBottom:'.5rem'}}>🏗️ Chantiers en cours</h2>
+        <p style={{color:'var(--txt2)',fontSize:13,marginBottom:'1rem'}}>
+          Déclare les travaux actifs sur cette période et leur part dans les dépenses. Total = 100%.
+        </p>
+
+        {lines.map((line, i) => {
+          const selKey = `${line.cat2}|${line.cat3}`;
+          return (
+            <div key={i} style={{display:'flex',gap:6,alignItems:'center',marginBottom:8}}>
+              <select value={selKey} onChange={e=>updCat(i,e.target.value)} style={{flex:1,padding:'7px 8px',fontSize:12}}>
+                <option value="|">— Choisir un chantier</option>
+                {TRAVAUX_OPTS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+              <input type="number" value={line.pct} onChange={e=>updPct(i,e.target.value)}
+                min={0} max={100}
+                style={{width:60,padding:'7px 6px',border:'.5px solid var(--brd2)',borderRadius:7,
+                  background:'var(--bg)',color:'var(--txt)',textAlign:'center',fontSize:13,fontFamily:'inherit'}}/>
+              <span style={{color:'var(--txt2)',fontSize:13}}>%</span>
+              {lines.length > 1 && (
+                <button onClick={()=>setLines(p=>p.filter((_,j)=>j!==i))}
+                  style={{background:'none',border:'none',cursor:'pointer',color:'var(--rd-fg)',fontSize:16,padding:'2px 4px'}}>✕</button>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="flex mb-3" style={{gap:8,marginTop:'.5rem'}}>
+          {lines.length < 4 && <button className="btn-ghost" style={{fontSize:12}} onClick={add}>+ Chantier</button>}
+          <div style={{marginLeft:'auto',fontWeight:600,fontSize:13,color:isOK?'var(--gr-fg)':'var(--am-fg)'}}>
+            Total : {total}%{isOK ? ' ✓' : ''}
+          </div>
+        </div>
+
+        <div className="flex" style={{gap:8,justifyContent:'flex-end'}}>
+          <button className="btn-ghost" onClick={onClose}>Passer cette étape →</button>
+          <button className="btn-green" onClick={() => onValidate(lines.map(l=>({...l,pct:parseInt(l.pct)||0})))} disabled={!isOK}>
+            Valider →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STEP 3: CONTEXTE MESSENGER (one-shot) ────────────────────────────────────
+
+function Step3({ rawTransactions, onNext, onSkip }) {
+  const [apiKey]         = useState(() => localStorage.getItem(LS_KEY) || '');
+  const [showSettings,   setShowSettings]   = useState(false);
+  const [chantiers,      setChantiers]      = useState(null); // null = modal visible
+  const [messengerText,  setMessengerText]  = useState('');
+  const [loading,        setLoading]        = useState(false);
+  const [statusMsg,      setStatusMsg]      = useState('');
+
+  const baseRows = useMemo(() => buildRows(rawTransactions, []), [rawTransactions]);
+
+  const runAnalysis = async (skipMessenger = false) => {
+    setLoading(true);
+    let rows = baseRows.map(r => ({...r})); // clone
+
+    // ── Passe A : match explicite via IA ──────────────────────────────────────
+    if (!skipMessenger && messengerText.trim() && apiKey) {
+      setStatusMsg('🤖 Passe A — analyse des messages Messenger…');
+      try {
+        const txList = rawTransactions.map(t =>
+          `ID:${t.id} | ${formatDateFR(t.date)} | ${t.libelle} | ${t.contrepartie} | ${t.montant.toFixed(2)}€`
+        ).join('\n');
+
+        const chStr = chantiers.map(c =>
+          `${c.cat2}${c.cat3?' › '+c.cat3:''} : ${c.pct}%`
+        ).join('\n');
+        const sys = `Tu es l'assistant comptable de la SCI "La Maison des Jean-Pierre".
+Associés : Machi=Maxime, Alex=Alexis, Rac=Raphaël, Bachi=Hugo, Hecto=Hector, Saum=Simon.
+
+CHANTIERS EN COURS (ventilation par défaut si non précisée) :
+${chStr}
+
+TRANSACTIONS CSV :
+${txList}
+
+MISSION — PASSE A UNIQUEMENT :
+Effectue deux tâches sur la conversation Messenger ci-après.
+
+━━ TÂCHE 1 : MATCHING TRANSACTIONS ━━
+Identifie les transactions CSV explicitement mentionnées (montant principal, fournisseur en confirmation).
+Ne matcher que des mentions directes — pas de déduction.
+Ventilation :
+• 1 seul chantier cité → 100% vers ce chantier
+• Plusieurs chantiers + proportions → selon proportions citées
+• Plusieurs chantiers sans proportion → selon les % déclarés ci-dessus
+
+━━ TÂCHE 2 : DÉTECTION DES REMBOURSEMENTS ━━
+
+Lis la conversation MESSAGE PAR MESSAGE dans l'ordre chronologique.
+
+RÈGLE 1 — INCLURE (les 2 conditions doivent être vraies simultanément) :
+
+(a) Un associé est identifiable comme payeur :
+    Machi / Maxime / Max → "Machi"
+    Alex / Alexis → "Alex"
+    Rac / Raphaël / Raph → "Rac"
+    Bachi / Hugo / Babak / Baback / Bacry / Ba → "Bachi"
+    Hecto / Hector → "Hecto"
+    Saum / Simon / Saumon → "Saum"
+
+(b) Un montant est mentionné dans le même message
+    (formats : 43€, 43€25, 43,25€, 43.25€, EUR 43, 43 euros)
+
+Cas particuliers (règle 1 étendue) :
+  - Message avec montant + sans nom + sans "Shine" → payeur = Machi (l'exporteur de la conv)
+  - L'auteur du message est un associé + montant présent + aucun signal Shine → l'auteur est le payeur
+
+RÈGLE 2 — EXCLURE (prioritaire sur règle 1) :
+
+Signal présent dans le message → PAS de remboursement :
+  • "Shine" / "carte shine" / "CB shine" / "compte Shine" / "compte de la SCI"
+  • "par la SCI" / "payé par la SCI" / "par virement par la SCI" / "prélèvement par la SCI"
+  → Ces dépenses sont déjà dans le CSV bancaire — rien à rembourser.
+
+Exclusions complémentaires :
+  • "Tricount" → invités weekend, hors SCI
+  • "déjà remboursé" / "c'est bon" / "réglé" → ne pas recréer
+  • Virements JPP / cotisations mensuelles sans dépense associée → exclure
+
+Exemples VALIDES :
+  "46,94 payé par Bachi pour jpp" → remboursement Bachi 46.94€
+  "Plombier avancé par Hector 308€" → remboursement Hecto 308€
+  "345,75e paye par Alexis pour la SCI pour l'eau" → remboursement Alex 345.75€
+  "119 euros payé par saumon en péages essence" → remboursement Saum 119€
+  "26,93 € sur Amazon pour remplacer le plateau de la ponceuse" → pas de nom → payeur = Machi
+
+Exemples EXCLUS :
+  "73,99 carte shine plomberie" → Shine présent → CSV seulement
+  "344€ leroy merlin payé par carte shine pour buanderie" → Shine → CSV seulement
+  "Achat piano 1194€ avec le compte de la SCI" → SCI → CSV seulement
+
+Format libellé virement Shine (max 60 chars) : "rbst [Prénom] - [motif court] [mois an]"
+
+Réponds UNIQUEMENT en JSON valide (aucun texte avant ou après) :
+{"matchings":[{"transactionId":"row-N","contexte":"raison courte","ventilations":[{"cat2":"...","cat3":"...","pct":100,"libelle":"..."}]}],"remboursements":[{"id":"r1","associe":"Hecto","montant":43.25,"motif":"essence tondeuse","date":"2026-05-08","libelleSuggere":"rbst Hecto - essence mai 26"}]}`;
+
+        const reply = await callClaude(apiKey, [{role:'user',content:`Conversation Messenger :\n\n${messengerText}`}], sys, 4500);
+        const clean = reply.replace(/```json|```/g,'').trim();
+        const jm    = clean.match(/\{[\s\S]*\}/);
+        if (jm) {
+          const data  = JSON.parse(jm[0]);
+          rows = applyPasseA(rows, data.matchings || []);
+          // ── Passe B : ventilation déterministe ──────────────────────────────
+          setStatusMsg('⚙️ Passe B — ventilation automatique…');
+          rows = applyPasseB(rows, chantiers);
+          const rembos = (data.remboursements || []).map((r,i) => ({...r, id:r.id||`r${i}`, montant:parseFloat(r.montant)||0}));
+          setLoading(false); setStatusMsg('');
+          onNext({ rows, chantiers, remboursements: rembos });
+          return;
+        }
+      } catch(e) {
+        setStatusMsg(`⚠️ Erreur IA (${e.message}) — passe B uniquement`);
+      }
+    }
+
+    // ── Passe B uniquement ────────────────────────────────────────────────────
+    setStatusMsg('⚙️ Passe B — ventilation automatique des achats travaux…');
+    rows = applyPasseB(rows, chantiers);
+    setLoading(false); setStatusMsg('');
+    onNext({ rows, chantiers, remboursements: [] });
+  };
+
+  // ── Modal chantiers (phase 1) ─────────────────────────────────────────────
+  if (!chantiers) {
+    if (!apiKey) return (
+      <div className="card card-sm">
+        <h2>💬 Contexte Messenger</h2>
+        <div className="notice notice-am mb-2">
+          ⚠️ Clé API Anthropic manquante. Tu peux quand même utiliser la ventilation automatique (passe B) sans clé.
+        </div>
+        <div className="flex flex-wrap" style={{gap:'.5rem',marginBottom:'1rem'}}>
+          <button className="btn" onClick={()=>setShowSettings(true)}>⚙️ Configurer la clé API</button>
+          <button className="btn-ghost" onClick={onSkip}>Passer cette étape →</button>
+        </div>
+        <div style={{fontSize:12,color:'var(--txt2)'}}>
+          Sans clé API : déclare quand même tes chantiers pour la ventilation automatique.
+        </div>
+        <button className="btn-green mt-2" onClick={()=>setChantiers([{cat2:'',cat3:'',pct:100}])}>
+          Continuer sans IA →
+        </button>
+        {showSettings && <SettingsModal onClose={()=>{setShowSettings(false);window.location.reload();}}/>}
+      </div>
+    );
+    return <ChantierModal onValidate={setChantiers} onClose={onSkip}/>;
+  }
+
+  // ── Phase 2 : paste Messenger + analyse ──────────────────────────────────
+  return (
+    <div className="card">
+      <div className="flex-between mb-2">
+        <h2 style={{marginBottom:0}}>💬 Contexte Messenger</h2>
+        <button className="btn-ghost" onClick={onSkip}>Passer →</button>
+      </div>
+
+      {/* Récap chantiers */}
+      <div style={{background:'var(--bg)',border:'.5px solid var(--brd)',borderRadius:8,
+        padding:'10px 14px',marginBottom:'1rem'}}>
+        <div style={{fontSize:11,color:'var(--txt2)',marginBottom:5,fontWeight:600,textTransform:'uppercase',letterSpacing:'.04em'}}>
+          🏗️ Chantiers déclarés
+        </div>
+        {chantiers.map((c,i) => (
+          <div key={i} className="flex-between" style={{fontSize:13}}>
+            <span>{c.cat2}{c.cat3?' › '+c.cat3:''}</span>
+            <strong>{c.pct}%</strong>
+          </div>
+        ))}
+        <button className="btn-ghost" style={{fontSize:11,marginTop:6,padding:'3px 8px'}}
+          onClick={()=>setChantiers(null)}>✏️ Modifier</button>
+      </div>
+
+      <label>Messages Messenger (optionnel)</label>
+      <textarea value={messengerText} onChange={e=>setMessengerText(e.target.value)}
+        placeholder={"8 mai 2026, 20:29\nHector\n43€25 d'essence tondeuse — CB perso\n\n10 mai 2026, 18:15\nAlexis\npompe lave-vaisselle 61€15 de ma CB perso"}
+        style={{minHeight:180,fontFamily:'monospace',fontSize:11.5,marginBottom:'1rem'}}/>
+
+      {!apiKey && messengerText.trim() && (
+        <div className="notice notice-am mb-1" style={{fontSize:12}}>
+          ⚠️ Clé API manquante — seule la passe B (ventilation automatique) sera appliquée.
+        </div>
+      )}
+      {statusMsg && <div className="notice notice-ia mb-1">{statusMsg}</div>}
+
+      <div className="flex flex-wrap" style={{gap:'.6rem'}}>
+        <button className="btn" onClick={()=>runAnalysis(false)} disabled={loading}>
+          {loading ? <><span className="spin"/> Analyse…</> : '→ Analyser'}
+        </button>
+        <button className="btn-ghost" onClick={()=>runAnalysis(true)} disabled={loading}>
+          Passe B uniquement →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── STEP 4: REMBOURSEMENTS ───────────────────────────────────────────────────
+
+// Libellé du virement groupé (max 60 chars)
+function buildGroupLibelle(g) {
+  if (g.items.length === 1) return g.items[0].libelleSuggere || `rbst ${g.associe} - ${g.items[0].motif}`;
+  const motifs = g.items.map(i => i.motif).join(' + ');
+  const cand = `rbst ${g.associe} - ${motifs}`;
+  if (cand.length <= 60) return cand;
+  const dates = g.items.map(i => i.date).filter(Boolean).sort();
+  const last  = dates[dates.length - 1];
+  const mRef  = last ? new Date(last).toLocaleDateString('fr-FR', {month:'short', year:'2-digit'}) : '';
+  return `rbst ${g.associe} - ${g.items.length} avances${mRef?' '+mRef:''}`.slice(0, 60);
+}
+
+// Date butoir = date du dernier virement sortant "rbst" dans le CSV courant
+function findDateButoir(rawTxs) {
+  const rbstTxs = (rawTxs || []).filter(tx =>
+    tx.montant < 0 && /rbst/i.test((tx.libelle || '') + ' ' + (tx.contrepartie || ''))
+  );
+  if (!rbstTxs.length) return null;
+  return rbstTxs.reduce((max, tx) => tx.date > max ? tx.date : max, rbstTxs[0].date);
+}
+
+function Step4({ remboursements: rin, rawTxs, onNext, onSkip }) {
+  // ── 1. Date butoir : dernier "rbst" sortant dans le CSV ─────────────────────
+  const dateButoirISO = useMemo(() => findDateButoir(rawTxs), [rawTxs]);
+
+  // ── 2. Filtrer : garder uniquement les demandes après la date butoir ─────────
+  const rinFiltered = useMemo(() => {
+    if (!dateButoirISO) return rin;                           // pas de butoir → tout afficher
+    return rin.filter(r => !r.date || r.date > dateButoirISO);
+  }, [rin, dateButoirISO]);
+
+  // ── 3. Grouper par associé → 1 virement par personne ────────────────────────
+  const groups = useMemo(() => {
+    const g = {};
+    rinFiltered.forEach(r => {
+      if (!g[r.associe]) g[r.associe] = { associe: r.associe, items: [], total: 0 };
+      g[r.associe].items.push(r);
+      g[r.associe].total += parseFloat(r.montant) || 0;
+    });
+    return Object.values(g).map(gr => ({
+      ...gr,
+      total: parseFloat(gr.total.toFixed(2)),
+      libelleSuggere: buildGroupLibelle(gr),
+    }));
+  }, [rinFiltered]);
+
+  const [checked,  setChecked]  = useState({});
+  const [expanded, setExpanded] = useState({});
+  const [showRIB,  setShowRIB]  = useState({});
+
+  const excluded   = rin.length - rinFiltered.length;
+  const doneCount  = groups.filter(g => !!checked[g.associe]).length;
+  const allDone    = groups.length > 0 && doneCount === groups.length;
+
+  if (!rin.length) return (
+    <div className="card card-sm">
+      <h2>💸 Remboursements</h2>
+      <div className="notice notice-gr">✓ Aucun remboursement détecté dans la conversation.</div>
+      <button className="btn-green" onClick={() => onNext([])}>Continuer →</button>
+    </div>
+  );
+
+  if (!groups.length) return (
+    <div className="card card-sm">
+      <h2>💸 Remboursements</h2>
+      {dateButoirISO && (
+        <div className="notice notice-gr mb-2">
+          ✓ Tous les remboursements détectés ({rin.length}) sont antérieurs au dernier rbst effectué le <strong>{formatDateFR(dateButoirISO)}</strong> — rien à faire.
+        </div>
+      )}
+      <button className="btn-green" onClick={() => onNext([])}>Continuer →</button>
+    </div>
+  );
+
+  return (
+    <div className="card">
+      <div className="flex-between mb-2">
+        <div>
+          <h2 style={{marginBottom:2}}>💸 Remboursements — 1 virement par associé</h2>
+          <div style={{fontSize:12,color:'var(--txt2)'}}>{doneCount}/{groups.length} virements effectués</div>
+        </div>
+        <button className="btn-ghost" onClick={onSkip}>Passer →</button>
+      </div>
+
+      {/* Info date butoir */}
+      {dateButoirISO ? (
+        <div className="notice notice-ia mb-2" style={{fontSize:12}}>
+          📅 Date butoir : <strong>{formatDateFR(dateButoirISO)}</strong> (dernier rbst dans le CSV)
+          {excluded > 0 && ` — ${excluded} demande(s) antérieure(s) exclue(s)`}
+        </div>
+      ) : (
+        <div className="notice mb-2" style={{fontSize:12,color:'var(--txt2)'}}>
+          ℹ️ Aucun virement "rbst" trouvé dans le CSV — toutes les demandes sont affichées.
+        </div>
+      )}
+
+      {/* Liste des virements */}
+      <div style={{display:'flex',flexDirection:'column',gap:'.6rem',marginBottom:'1.2rem'}}>
+        {groups.map(g => {
+          const isDone     = !!checked[g.associe];
+          const isSaum     = g.associe === 'Saum';
+          const isExpanded = !!expanded[g.associe];
+          return (
+            <div key={g.associe} style={{
+              border:`.5px solid ${isDone?'#2e7d32':'var(--brd)'}`,
+              borderRadius:8, padding:'12px 14px',
+              background:isDone?'var(--gr-bg)':'var(--bg)', transition:'.15s',
+            }}>
+              <div className="flex" style={{alignItems:'flex-start',gap:10}}>
+                <input type="checkbox" checked={isDone}
+                  onChange={e => setChecked(p => ({...p,[g.associe]:e.target.checked}))}
+                  style={{width:17,height:17,marginTop:2,cursor:'pointer',accentColor:'#2e7d32',flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  {/* En-tête */}
+                  <div className="flex-between" style={{marginBottom:4}}>
+                    <div className="flex" style={{gap:6,flexWrap:'wrap'}}>
+                      <span style={{fontWeight:700}}>{ASSOCIES[g.associe]?.nom || g.associe}</span>
+                      {isSaum && <span className="badge badge-partial" style={{fontSize:9}}>⏳ J+3</span>}
+                    </div>
+                    <span style={{fontWeight:700,fontSize:15,whiteSpace:'nowrap'}}>
+                      {g.total.toFixed(2).replace('.',',')} €
+                    </span>
+                  </div>
+
+                  {/* Libellé Shine */}
+                  <div style={{fontSize:11,fontFamily:'monospace',background:'var(--bg2)',
+                    padding:'2px 8px',borderRadius:3,display:'inline-block',color:'var(--txt2)',marginBottom:6}}>
+                    Libellé Shine : <strong style={{color:'var(--txt)'}}>{g.libelleSuggere}</strong>
+                  </div>
+
+                  {/* Détail multi-avances */}
+                  {g.items.length > 1 && (
+                    <div style={{marginTop:4}}>
+                      <button className="btn-ghost" style={{fontSize:11,padding:'2px 8px'}}
+                        onClick={()=>setExpanded(p=>({...p,[g.associe]:!p[g.associe]}))}>
+                        {isExpanded ? '▲ Masquer' : `▼ ${g.items.length} avances — voir le détail`}
+                      </button>
+                      {isExpanded && (
+                        <div style={{marginTop:6,border:'.5px solid var(--brd)',borderRadius:6,overflow:'hidden'}}>
+                          {g.items.map((item,i) => (
+                            <div key={i} style={{display:'flex',justifyContent:'space-between',
+                              padding:'6px 10px',fontSize:12,
+                              borderBottom:i<g.items.length-1?'.5px solid var(--brd)':'none',
+                              background:i%2===0?'var(--bg)':'var(--bg2)'}}>
+                              <span style={{color:'var(--txt2)'}}>
+                                {item.motif}
+                                {item.date && <span style={{fontSize:10,marginLeft:6,opacity:.7}}>({formatDateFR(item.date)})</span>}
+                              </span>
+                              <strong style={{whiteSpace:'nowrap',marginLeft:12}}>
+                                {parseFloat(item.montant).toFixed(2).replace('.',',')} €
+                              </strong>
+                            </div>
+                          ))}
+                          <div style={{display:'flex',justifyContent:'space-between',
+                            padding:'6px 10px',fontSize:12,fontWeight:700,
+                            background:'var(--bg2)',borderTop:'.5px solid var(--brd)'}}>
+                            <span>Total virement unique →</span>
+                            <span>{g.total.toFixed(2).replace('.',',')} €</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* RIB Saum */}
+                  {isSaum && (
+                    <div style={{marginTop:6}}>
+                      <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}
+                        onClick={()=>setShowRIB(p=>({...p,[g.associe]:!p[g.associe]}))}>
+                        ⚠️ {showRIB[g.associe]?'Masquer RIB':'Afficher RIB Saum'}
+                      </button>
+                      {showRIB[g.associe] && (
+                        <div className="rib-notice">
+                          <strong>⚠️ Virement NON instantané</strong> — Programmer dans 3 jours.<br/>
+                          <span style={{fontFamily:'monospace',userSelect:'all'}}>{SAUM_RIB}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {!allDone && <div className="notice notice-am mb-2">⚠️ {groups.length-doneCount} virement(s) restant(s).</div>}
+      {allDone  && <div className="notice notice-gr mb-2">✓ Tous effectués !</div>}
+      <button className="btn-green" onClick={() => onNext(groups)}>Continuer → Révision</button>
+    </div>
+  );
+}
+
+// ─── VENTILATION MODAL ────────────────────────────────────────────────────────
+
+function VentModal({ row, onSave, onClose, onCancelVent }) {
+  const total = row.montant;
+  // Initialiser avec les ventilations existantes (passe B ou manuelle) si dispo
+  const [lines, setLines] = useState(() => {
+    if (row.ventilations && row.ventilations.length >= 2) {
+      return row.ventilations.map(v => ({
+        montant: v.montant,
+        libelle: v.libelle || row.libelle,
+        cat1: v.cat1 || row.cat1 || 'Travaux et investissements',
+        cat2: v.cat2 || '',
+        cat3: v.cat3 || '',
+      }));
+    }
+    const half = parseFloat((total/2).toFixed(2));
+    return [
+      {montant:half, libelle:row.libelle, cat1:row.cat1||'', cat2:row.cat2||'', cat3:row.cat3||''},
+      {montant:parseFloat((total-half).toFixed(2)), libelle:row.libelle, cat1:row.cat1||'', cat2:row.cat2||'', cat3:row.cat3||''},
+    ];
+  });
+
+  const sum = lines.reduce((s,l) => s + (parseFloat(l.montant)||0), 0);
+  const isOK = Math.abs(sum - total) < 0.005;
+
+  const upd = (i, field, val) => setLines(p => {
+    const a = [...p];
+    a[i] = {...a[i], [field]:val};
+    if (field==='cat1') { a[i].cat2=''; a[i].cat3=''; }
+    if (field==='cat2') { a[i].cat3=''; }
+    return a;
+  });
+
+  const equalize = () => {
+    const n = lines.length;
+    const base = parseFloat((total/n).toFixed(2));
+    const last = parseFloat((total - base*(n-1)).toFixed(2));
+    setLines(lines.map((l,i) => ({...l, montant: i===n-1 ? last : base})));
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-wide">
+        <div className="flex-between mb-2">
+          <h2 style={{marginBottom:0}}>✂ Ventiler — {row.libelle.slice(0,50)}</h2>
+          <button className="btn-ghost" onClick={onClose}>✕</button>
+        </div>
+        <p style={{color:'var(--txt2)',fontSize:13,marginBottom:'1rem'}}>
+          Montant total : <strong>{total.toFixed(2).replace('.',',')} €</strong>
+        </p>
+
+        {lines.map((line, i) => (
+          <div key={i} style={{display:'grid',gridTemplateColumns:'80px 1fr 140px 160px 120px auto',
+            gap:6,alignItems:'end',padding:10,background:'var(--bg2)',borderRadius:7,marginBottom:6}}>
+            <div>
+              <div style={{fontSize:11,color:'var(--txt2)',marginBottom:3}}>Montant</div>
+              <input type="number" step="0.01" value={line.montant}
+                onChange={e => upd(i,'montant',parseFloat(e.target.value)||0)}
+                style={{padding:'4px 6px',fontSize:12}}/>
+            </div>
+            <div>
+              <div style={{fontSize:11,color:'var(--txt2)',marginBottom:3}}>Libellé</div>
+              <input type="text" value={line.libelle} onChange={e=>upd(i,'libelle',e.target.value)}
+                style={{padding:'4px 8px',fontSize:12}}/>
+            </div>
+            <div>
+              <div style={{fontSize:11,color:'var(--txt2)',marginBottom:3}}>CAT1</div>
+              <select value={line.cat1} onChange={e=>upd(i,'cat1',e.target.value)}
+                style={{padding:'4px',fontSize:11}}>
+                <option value="">—</option>
+                {CAT1_LIST.map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:11,color:'var(--txt2)',marginBottom:3}}>CAT2</div>
+              <select value={line.cat2} onChange={e=>upd(i,'cat2',e.target.value)}
+                disabled={!line.cat1} style={{padding:'4px',fontSize:11}}>
+                <option value="">—</option>
+                {getCat2List(line.cat1).map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:11,color:'var(--txt2)',marginBottom:3}}>CAT3</div>
+              <select value={line.cat3} onChange={e=>upd(i,'cat3',e.target.value)}
+                disabled={!line.cat2} style={{padding:'4px',fontSize:11}}>
+                <option value="">—</option>
+                {getCat3List(line.cat1,line.cat2).map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{paddingBottom:2}}>
+              {lines.length > 2 && (
+                <button onClick={()=>setLines(p=>p.filter((_,j)=>j!==i))}
+                  style={{background:'none',border:'none',cursor:'pointer',color:'var(--rd-fg)',fontSize:16}}>✕</button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <div className="flex mb-3" style={{gap:8}}>
+          {lines.length < 6 && (
+            <button className="btn-ghost" style={{fontSize:12}}
+              onClick={() => setLines(p=>[...p,{montant:0,libelle:row.libelle,cat1:'',cat2:'',cat3:''}])}>
+              + Ligne
+            </button>
+          )}
+          <button className="btn-ghost" style={{fontSize:12}} onClick={equalize}>⇌ Égaliser</button>
+          <div style={{marginLeft:'auto',fontSize:13,fontWeight:500,color:isOK?'var(--gr-fg)':'var(--am-fg)'}}>
+            Somme : {sum.toFixed(2).replace('.',',')} €
+            {!isOK && ` (reste ${Math.abs(total-sum).toFixed(2).replace('.',',')} €)`}
+          </div>
+        </div>
+
+        <div className="flex" style={{justifyContent:'space-between',gap:8}}>
+          <button className="btn-ghost" style={{color:'var(--rd-fg)',fontSize:12}}
+            onClick={onCancelVent}>
+            🗑 Annuler la ventilation
+          </button>
+          <div className="flex" style={{gap:8}}>
+            <button className="btn-ghost" onClick={onClose}>Fermer</button>
+            <button className="btn-green" onClick={()=>onSave(lines)} disabled={!isOK}>
+              Valider
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── REVISION ROW ─────────────────────────────────────────────────────────────
+
+function RevRow({ row, onChange, onVentiler }) {
+  const c2opts = getCat2List(row.cat1);
+  const c3opts = getCat3List(row.cat1, row.cat2);
+  const c1bg   = TAXONOMY[row.cat1]?.color;
+  const isPos  = row.montant >= 0;
+  const isVent = row.ventilations && row.ventilations.length > 0;
+
+  // ── Libellé : state local pour ne pas perdre le focus à chaque frappe ───────
+  const [libLocal, setLibLocal] = useState(row.libelle);
+  const libRef = useRef(null);
+  useEffect(() => {
+    // Synchronise depuis le parent seulement si l'input n'est pas en focus
+    if (document.activeElement !== libRef.current) setLibLocal(row.libelle);
+  }, [row.libelle]);
+
+  // ── N°Facture : même traitement ──────────────────────────────────────────────
+  const [facLocal, setFacLocal] = useState(row.nFacture || '');
+  const facRef = useRef(null);
+  useEffect(() => {
+    if (document.activeElement !== facRef.current) setFacLocal(row.nFacture || '');
+  }, [row.nFacture]);
+
+  const srcBadge = isVent
+    ? <button className="vent-badge" onClick={()=>onVentiler(row)}>✓ {row.ventilations.length} lignes</button>
+    : row.source==='auto' ? <span className="badge badge-auto">Auto ✓</span>
+    : row.source==='ia'   ? (
+        <div className="tt"><span className="badge badge-ia">✦ IA</span>
+          {row.iaSuggestion && <div className="tt-box">{row.iaSuggestion}</div>}
+        </div>
+      )
+    : <span className="badge badge-manual">Manuel</span>;
+
+  return (
+    <tr style={c1bg ? {background:c1bg+'28'} : undefined}>
+      <td style={{whiteSpace:'nowrap',fontSize:11,color:'var(--txt2)'}}>{formatDateFR(row.date)}</td>
+      <td>
+        <div className="tt" style={{display:'block'}}>
+          <input ref={libRef} className="inp-inline"
+            value={libLocal}
+            onChange={e => setLibLocal(e.target.value)}
+            onBlur={() => onChange(row.id, 'libelle', libLocal)}/>
+          {row.libelleBrut && row.libelle!==row.libelleBrut &&
+            <div className="tt-box">{row.libelleBrut}</div>}
+        </div>
+        {row.contrepartie && <div style={{fontSize:10,color:'var(--txt2)',marginTop:1}}>{row.contrepartie}</div>}
+      </td>
+      <td style={{textAlign:'right',fontWeight:600,fontSize:12,whiteSpace:'nowrap',
+        color:isPos?'var(--gr-fg)':'var(--rd-fg)'}}>
+        {isPos?'+':''}{Math.abs(row.montant).toFixed(2).replace('.',',')} €
+      </td>
+      {isVent ? (
+        <td colSpan={3} style={{color:'var(--txt2)',fontSize:11,textAlign:'center',fontStyle:'italic'}}>
+          ventilé en {row.ventilations.length} lignes — cliquer sur ✓ pour voir le détail
+        </td>
+      ) : (
+        <>
+          <td>
+            <select className="sel-inline" value={row.cat1} onChange={e=>onChange(row.id,'cat1',e.target.value)}>
+              <option value="">—</option>{CAT1_LIST.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </td>
+          <td>
+            <select className="sel-inline" value={row.cat2} onChange={e=>onChange(row.id,'cat2',e.target.value)} disabled={!row.cat1}>
+              <option value="">—</option>{c2opts.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </td>
+          <td>
+            <select className="sel-inline" value={row.cat3} onChange={e=>onChange(row.id,'cat3',e.target.value)} disabled={!row.cat2||!c3opts.length}>
+              <option value="">—</option>{c3opts.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </td>
+        </>
+      )}
+      <td><input ref={facRef} className="inp-inline"
+        value={facLocal}
+        onChange={e => setFacLocal(e.target.value)}
+        onBlur={() => onChange(row.id, 'nFacture', facLocal)}
+        placeholder="—"/></td>
+      <td style={{textAlign:'center',whiteSpace:'nowrap'}}>
+        {srcBadge}
+        {!isVent && (
+          <button title="Ventiler" onClick={()=>onVentiler(row)}
+            style={{marginLeft:4,background:'none',border:'none',cursor:'pointer',color:'var(--txt2)',fontSize:11,padding:0}}>
+            ✂
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+// Memoïzé : ne re-render que si la ligne elle-même change (préserve le DOM + focus dropdown)
+const RevRowMemo = React.memo(RevRow);
+
+// ─── STEP 5: RÉVISION ─────────────────────────────────────────────────────────
+
+function Step5({ transactions, matchings, onNext }) {
+  const [apiKey] = useState(() => localStorage.getItem(LS_KEY) || '');
+  // transactions are already pre-built (from Step3 output or autoCat)
+  const [rows, setRows] = useState(() => transactions);
+  const [loadIA, setLoadIA] = useState(false);
+  const [ventRow, setVentRow] = useState(null);
+  // All sections open by default
+  const [open, setOpen] = useState({auto:true, ia:true, manual:true});
+  // Section assignée UNE SEULE FOIS à l'ouverture — jamais recalculée pendant la révision
+  const [sectionMap, setSectionMap] = useState(() => {
+    const m = {};
+    transactions.forEach(r => { m[r.id] = getRevSection(r); });
+    return m;
+  });
+
+  // useCallback : référence stable → React.memo sur RevRowMemo reste efficace
+  const upd = React.useCallback((id, field, val) => {
+    const sy = window.scrollY; // mémoriser position scroll fenêtre
+    setRows(p => p.map(r => {
+      if (r.id!==id) return r;
+      const u = {...r, [field]:val, source:'manual'};
+      if (field==='cat1') { u.cat2=''; u.cat3=''; }
+      if (field==='cat2') { u.cat3=''; }
+      return u;
+    }));
+    // Restaurer après le re-render (évite le saut en haut de page)
+    requestAnimationFrame(() => window.scrollTo(0, sy));
+  }, []);
+  const openVent = React.useCallback(row => setVentRow(row), []);
+
+  const cancelVent = () => {
+    const id = ventRow?.id;
+    if (!id) return;
+    setRows(prev => prev.map(r => r.id === id
+      ? {...r, ventilations:[], cat1:'', cat2:'', cat3:'', source:'manual'}
+      : r
+    ));
+    setSectionMap(prev => ({...prev, [id]: 'manual'})); // déplace vers "À catégoriser"
+    setVentRow(null);
+  };
+
+  const saveVent = (lines) => {
+    setRows(p => p.map(r => r.id===ventRow.id ? {...r, ventilations:lines} : r));
+    setVentRow(null);
+  };
+
+  const suggestIA = async () => {
+    if (!apiKey) { alert('Clé API manquante'); return; }
+    const need = rows.filter(r => getSection(r)==='manual');
+    if (!need.length) { alert('Aucune ligne sans catégorie.'); return; }
+    setLoadIA(true);
+    try {
+      const list = need.map(r =>
+        `ID:${r.id} | ${formatDateFR(r.date)} | ${r.libelle.slice(0,45)} | ${r.contrepartie.slice(0,30)} | ${r.montant.toFixed(2)}€`
+      ).join('\n');
+      const cats = CAT1_LIST.join(', ');
+      const prompt = `SCI maison de campagne. Catégorise ces transactions.
+Réponds UNIQUEMENT par un tableau JSON : [{"id":"...","cat1":"...","cat2":"...","cat3":"...","note":"raison courte"}]
+CAT1 : ${cats}
+Transactions :
+${list}`;
+      const reply = await callClaude(apiKey, [{role:'user',content:prompt}], '', 3500);
+      const m = reply.replace(/```json|```/g,'').trim().match(/\[[\s\S]*\]/);
+      if (m) {
+        const sugg = JSON.parse(m[0]);
+        setRows(p => p.map(r => {
+          const s = sugg.find(sg=>sg.id===r.id);
+          if (s && getSection(r)==='manual')
+            return {...r, cat1:s.cat1||'', cat2:s.cat2||'', cat3:s.cat3||'',
+                    source:'ia', iaSuggestion:s.note||''};
+          return r;
+        }));
+      }
+    } catch(e) { alert('Erreur IA : ' + e.message); }
+    setLoadIA(false);
+  };
+
+  // Positions figées — on lit sectionMap (figé), pas getRevSection(row) (dynamique)
+  const autoRows   = sortRows(rows.filter(r => sectionMap[r.id] === 'auto'));
+  const iaRows     = sortRows(rows.filter(r => sectionMap[r.id] === 'ia'));
+  const manualRows = sortRows(rows.filter(r => sectionMap[r.id] === 'manual'));
+
+  // Preserve scroll positions for each section during re-renders
+  const scrollRefs = useRef({});
+  const scrollPos  = useRef({});
+
+  const Section = ({title, rows:sRows, sKey, variant}) => {
+    const divRef = (el) => {
+      if (el) {
+        scrollRefs.current[sKey] = el;
+        // Restore scroll after render
+        if (scrollPos.current[sKey] != null)
+          el.scrollTop = scrollPos.current[sKey];
+      }
+    };
+    const onScroll = (e) => { scrollPos.current[sKey] = e.target.scrollTop; };
+    return (
+      <div style={{marginBottom:8}}>
+        <button className={`accordion-btn ${variant}`} onClick={()=>setOpen(p=>({...p,[sKey]:!p[sKey]}))}>
+          <span>{title}</span>
+          <span>{open[sKey] ? '▲' : '▼'}</span>
+        </button>
+        {open[sKey] && sRows.length > 0 && (
+          <div ref={divRef} onScroll={onScroll}
+            className="tbl-wrap" style={{marginTop:4,maxHeight:'50vh',overflowY:'auto'}}>
+            <table>
+              <thead><tr>
+                <th style={{width:80}}>Date</th>
+                <th style={{minWidth:150}}>Libellé</th>
+                <th style={{width:90,textAlign:'right'}}>Montant</th>
+                <th style={{width:145}}>CAT1</th>
+                <th style={{width:165}}>CAT2</th>
+                <th style={{width:130}}>CAT3</th>
+                <th style={{width:70}}>N°Fact.</th>
+                <th style={{width:80,textAlign:'center'}}>Source</th>
+              </tr></thead>
+              <tbody>
+                {sRows.map(r => <RevRowMemo key={r.id} row={r} onChange={upd} onVentiler={openVent}/>)}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {open[sKey] && sRows.length===0 && (
+          <div style={{padding:'1rem',color:'var(--txt2)',fontSize:13,textAlign:'center'}}>Aucune ligne</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="card">
+      <div className="flex-between mb-2">
+        <div>
+          <h2 style={{marginBottom:2}}>✏️ Révision</h2>
+          <div style={{fontSize:12,color:'var(--txt2)'}}>
+            {rows.length} transactions • {autoRows.length} auto • {iaRows.length} IA • {manualRows.length} à traiter
+          </div>
+        </div>
+        <div className="flex" style={{gap:'.5rem'}}>
+
+          <button className="btn-green" onClick={() => onNext(rows)}>Continuer →</button>
+        </div>
+      </div>
+
+      <Section title={`✓ Catégorisées automatiquement (${autoRows.length})`}
+        rows={autoRows} sKey="auto" variant="gr"/>
+      <Section title={`🤖 Catégorisées par IA — à vérifier (${iaRows.length})`}
+        rows={iaRows} sKey="ia" variant="am"/>
+      <Section title={`❓ À catégoriser (${manualRows.length})`}
+        rows={manualRows} sKey="manual" variant="rd"/>
+
+      {ventRow && <VentModal row={ventRow} onSave={saveVent} onClose={()=>setVentRow(null)} onCancelVent={cancelVent}/>}
+    </div>
+  );
+}
+
+// ─── STEP 6: EXPORT ───────────────────────────────────────────────────────────
+
+// 11-column TSV: Date | Libellé | Contrepartie | Montant | CAT1 | CAT2 | CAT3 | NFacture | Commentaire | DateAnalyse | Année
+function buildExportRows(rows) {
+  // 9 colonnes Journal : Date tréso | Date gestion | Libellé | Montant | CAT1 | CAT2 | CAT3 | N°Facture | Commentaire
+  const result = [];
+  for (const r of rows) {
+    if (r.ventilations?.length) {
+      for (const v of r.ventilations) {
+        result.push([
+          formatDateFR(r.date),                                        // 1 — Date trésorerie
+          '',                                                          // 2 — Date de gestion (vide)
+          v.libelle||r.libelle,                                        // 3 — Libellé
+          v.montant.toFixed(2).replace('.',','),                       // 4 — Montant
+          v.cat1||'', v.cat2||'', v.cat3||'',                         // 5/6/7 — CAT1/2/3
+          r.nFacture||'',                                              // 8 — N° Facture
+          `Ventilation ${r.montant.toFixed(2).replace('.',',')}€ |`,  // 9 — Commentaire
+        ]);
+      }
+    } else {
+      result.push([
+        formatDateFR(r.date),                                          // 1 — Date trésorerie
+        '',                                                            // 2 — Date de gestion (vide)
+        r.libelle,                                                     // 3 — Libellé
+        r.montant.toFixed(2).replace('.',','),                         // 4 — Montant
+        r.cat1||'', r.cat2||'', r.cat3||'',                           // 5/6/7 — CAT1/2/3
+        r.nFacture||'',                                                // 8 — N° Facture
+        r.commentaire||'',                                             // 9 — Commentaire
+      ]);
+    }
+  }
+  return result;
+}
+
+function Step6({ transactions, onBack }) {
+  const [scriptUrl] = useState(() => localStorage.getItem(LS_URL) || '');
+  const [sent,   setSent]   = useState(false);
+  const [error,  setError]  = useState('');
+
+  const totalAmt = transactions.reduce((s,t)=>s+t.montant,0);
+  const recettes = transactions.filter(t=>t.montant>=0).reduce((s,t)=>s+t.montant,0);
+  const depenses = transactions.filter(t=>t.montant<0).reduce((s,t)=>s+t.montant,0);
+  const todoCount= transactions.filter(t=>!t.cat1).length;
+  const exportRows = buildExportRows(transactions);
+
+  const downloadTSV = () => {
+    const tsv = exportRows.map(r=>r.join('\t')).join('\n');
+    const blob = new Blob([tsv], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `LMDJP_${todayISO()}.tsv`;
+    a.click();
+  };
+
+  const pushScript = async () => {
+    if (!scriptUrl) { setError("URL Apps Script manquante (paramètres ⚙️)"); return; }
+    setError('');
+    try {
+      await fetch(scriptUrl, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'data='+encodeURIComponent(JSON.stringify({rows:exportRows})),
+      });
+      const dates = transactions.map(t=>t.date).filter(Boolean).sort();
+      if (dates.length) localStorage.setItem(LS_DATE, dates[dates.length-1]);
+      setSent(true);
+    } catch(e) { setError('Erreur : ' + e.message); }
+  };
+
+  return (
+    <div className="card">
+      <div className="flex-between mb-3">
+        <h2 style={{marginBottom:0}}>🚀 Export</h2>
+        <button className="btn-ghost" onClick={onBack}>← Révision</button>
+      </div>
+
+      <div className="flex flex-wrap mb-3" style={{gap:'.75rem'}}>
+        {[
+          {l:'Transactions', v:transactions.length, c:null},
+          {l:'Recettes', v:`+${recettes.toFixed(2).replace('.',',')} €`, c:'var(--gr-fg)'},
+          {l:'Dépenses', v:`${depenses.toFixed(2).replace('.',',')} €`, c:'var(--rd-fg)'},
+          {l:'Solde net', v:`${totalAmt>=0?'+':''}${totalAmt.toFixed(2).replace('.',',')} €`,
+           c:totalAmt>=0?'var(--gr-fg)':'var(--rd-fg)'},
+        ].map(s => (
+          <div key={s.l} className="stat-box">
+            <div className="stat-lbl">{s.l}</div>
+            <div className="stat-val" style={s.c?{color:s.c}:{}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {todoCount > 0 && <div className="notice notice-am mb-2">⚠️ {todoCount} transaction(s) sans catégorie.</div>}
+      {error     && <div className="notice notice-rd mb-2">❌ {error}</div>}
+      {sent      && (
+        <div className="notice notice-gr mb-2" style={{flexDirection:'column',alignItems:'flex-start'}}>
+          <strong>✓ Données envoyées au Google Sheet !</strong>
+          <a href={SHEET_URL} target="_blank" rel="noreferrer" style={{fontSize:12,color:'var(--gr-fg)',marginTop:4}}>Ouvrir le Sheet ↗</a>
+        </div>
+      )}
+
+      <div className="flex flex-wrap mb-3" style={{gap:'.6rem'}}>
+
+        <button className="btn-green" onClick={downloadTSV}>↓ Télécharger TSV</button>
+        <a href={SHEET_URL} target="_blank" rel="noreferrer">
+          <button className="btn-ghost">Ouvrir Sheet ↗</button>
+        </a>
+      </div>
+
+      {!scriptUrl && (
+        <div className="notice notice-ia mb-3" style={{fontSize:12}}>
+          ℹ️ Configure l'URL Apps Script dans ⚙️ pour activer la mise à jour automatique.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── BUDGET — COMPOSANTS ────────────────────────────────────────────────────
+
+const fmtEur = n => (Math.round(n)).toLocaleString('fr-FR') + ' €';
+
+// ÉTAPE 1 — Hypothèses globales
+function BudgetStep1({ data, onNext }) {
+  const today = todayISO();
+  const [nom, setNom]         = useState('');
+  const [periode, setPeriode] = useState('');
+  const [apports, setApports] = useState(data.apports || 0);
+  const [achats, setAchats]   = useState(data.achatsInitiaux || 0);
+  const [inflation, setInflation] = useState(4);
+  const [showDetail, setShowDetail] = useState(false);
+
+  // Projection initiale
+  const proj0 = useMemo(() => computeChargesProjection(data.annualTotals, 4, today), [data, today]);
+  const [charges, setCharges] = useState(proj0?.total || data.lastChargesEstimate || 0);
+  const [editingCharges, setEditingCharges] = useState(false);
+
+  // Quand l'inflation change → recalcule les charges (sauf si l'user édite les charges directement)
+  const onInflationChange = (val) => {
+    const v = parseFloat(val) || 0;
+    setInflation(v);
+    const p = computeChargesProjection(data.annualTotals, v, today);
+    if (p) setCharges(p.total);
+  };
+  // Quand les charges changent manuellement → back-calcul de l'inflation
+  const onChargesChange = (val) => {
+    const v = parseFloat(String(val).replace(/[^\d.-]/g,'')) || 0;
+    setCharges(v);
+    const rate = solveInflationForTotal(data.annualTotals, v, today);
+    setInflation(rate);
+  };
+
+  const proj = useMemo(() => computeChargesProjection(data.annualTotals, inflation, today), [data, inflation, today]);
+  const budgetDispo = apports - achats - charges;
+  const lastBudgetEstimatif = data.structural?.budgetEstimatif || 0;
+  const ecart = lastBudgetEstimatif ? budgetDispo - lastBudgetEstimatif : null;
+
+  const canNext = nom.trim() && periode.trim();
+
+  return (
+    <div className="card">
+      <h2 style={{marginBottom:'1rem'}}>📊 Hypothèses du nouveau budget</h2>
+
+      <div style={{display:'flex',flexDirection:'column',gap:'.75rem',marginBottom:'1.25rem'}}>
+        <label style={{fontSize:13}}>
+          <div style={{color:'var(--txt2)',marginBottom:3}}>Nom du budget</div>
+          <input className="inp" value={nom} onChange={e=>setNom(e.target.value)}
+            placeholder="Budget Juillet 2026" style={{width:'100%'}}/>
+        </label>
+        <label style={{fontSize:13}}>
+          <div style={{color:'var(--txt2)',marginBottom:3}}>Période (en-tête de colonne)</div>
+          <input className="inp" value={periode} onChange={e=>setPeriode(e.target.value)}
+            placeholder="Juillet 2026" style={{width:'100%'}}/>
+        </label>
+      </div>
+
+      <div style={{borderTop:'.5px solid var(--brd)',paddingTop:'1rem',display:'flex',flexDirection:'column',gap:'.6rem'}}>
+        {/* Apports */}
+        <div className="flex-between" style={{fontSize:14}}>
+          <span>APPORTS ASSOCIES (prev.)</span>
+          <input className="inp" type="text" value={fmtEur(apports)}
+            onChange={e=>setApports(parseFloat(e.target.value.replace(/[^\d.-]/g,''))||0)}
+            style={{width:130,textAlign:'right'}}/>
+        </div>
+        {/* Achats */}
+        <div className="flex-between" style={{fontSize:14}}>
+          <span>− ACHATS ET FRAIS INITIAUX</span>
+          <input className="inp" type="text" value={fmtEur(achats)}
+            onChange={e=>setAchats(parseFloat(e.target.value.replace(/[^\d.-]/g,''))||0)}
+            style={{width:130,textAlign:'right'}}/>
+        </div>
+        {/* Charges */}
+        <div className="flex-between" style={{fontSize:14}}>
+          <span>− CHARGES ET FRAIS COURANTS (prev.)</span>
+          <input className="inp" type="text" value={fmtEur(charges)}
+            onChange={e=>onChargesChange(e.target.value)}
+            style={{width:130,textAlign:'right'}}/>
+        </div>
+        {/* Détail charges */}
+        <button className="btn-ghost" style={{fontSize:12,alignSelf:'flex-start',padding:'2px 6px'}}
+          onClick={()=>setShowDetail(s=>!s)}>
+          {showDetail ? '▲ Masquer le détail' : '▼ Détail du calcul des charges'}
+        </button>
+        {showDetail && proj && (
+          <div style={{background:'var(--bg2)',borderRadius:8,padding:'12px',fontSize:12,color:'var(--txt2)'}}>
+            <div>Années pleines retenues : {proj.fullYears.join(' / ')}</div>
+            <div>Réel passé révolu : {fmtEur(proj.realPast)}</div>
+            <div>Moyenne année pleine : {fmtEur(proj.avgFullYear)}/an</div>
+            <div className="flex" style={{gap:6,alignItems:'center',margin:'6px 0'}}>
+              <span>Taux d'inflation :</span>
+              <input className="inp" type="number" step="0.1" value={inflation}
+                onChange={e=>onInflationChange(e.target.value)} style={{width:70}}/>
+              <span>%</span>
+            </div>
+            <div style={{marginTop:6}}>Projection {proj.detail[0]?.year}–{proj.horizon[1]} :</div>
+            {proj.detail.map(d => (
+              <div key={d.year} style={{paddingLeft:10}}>
+                {d.year} : {fmtEur(d.amount)}{d.prorata<1?` (prorata ${(d.prorata*100).toFixed(0)}%)`:''}
+              </div>
+            ))}
+            <div style={{marginTop:6,fontWeight:600,color:'var(--txt)'}}>
+              Total estimé : {fmtEur(proj.total)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Budget disponible */}
+      <div style={{borderTop:'.5px solid var(--brd)',marginTop:'1rem',paddingTop:'1rem',textAlign:'center'}}>
+        <div style={{fontSize:13,color:'var(--txt2)'}}>= BUDGET DISPONIBLE TRAVAUX</div>
+        <div style={{fontSize:28,fontWeight:700,margin:'4px 0'}}>{fmtEur(budgetDispo)}</div>
+        {ecart != null && (
+          <div style={{fontSize:12,color:'var(--txt2)'}}>
+            vs dernier budget : {fmtEur(lastBudgetEstimatif)} · écart : {ecart>=0?'+':''}{fmtEur(ecart)}
+          </div>
+        )}
+      </div>
+
+      <button className="btn-green" style={{width:'100%',marginTop:'1.25rem',justifyContent:'center'}}
+        disabled={!canNext}
+        onClick={()=>onNext({ nom:nom.trim(), periode:periode.trim(), apports, achats, charges, inflation, budgetDispo,
+          chargesProj: proj ? { realPast:proj.realPast, projected:proj.projected, total:proj.total } : null })}>
+        Confirmer les hypothèses →
+      </button>
+    </div>
+  );
+}
+
+// Construit la liste des lignes budget (CAT2 headers + CAT3 details) à partir du dernier budget + réel
+function buildBudgetLines(data) {
+  // On parcourt lastBudgetOrder (qui contient les lignes structurantes ET le détail travaux)
+  // On ne garde QUE les lignes de détail travaux (après "TRAVAUX & INVESTISSEMENTS")
+  const STRUCT_RE = /apports associes|achats et frais initiaux|charges et frais courants|budget estimatif|travaux & investissements/i;
+  const lines = [];
+  let inTravaux = false;
+  for (const entry of data.lastBudgetOrder) {
+    const nl = normLabel(entry.label);
+    if (/travaux & investissements/i.test(nl)) { inTravaux = true; continue; }
+    if (!inTravaux) continue;
+    if (STRUCT_RE.test(nl)) continue;
+    const real = data.realByLabel[nl] || 0;
+    // Détection CAT2 (header) vs CAT3 : les CAT2 ont un émoji en préfixe dans le sheet
+    const isHeader = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/u.test(entry.label);
+    lines.push({
+      label: entry.label.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').trim(),
+      rawLabel: entry.label,
+      nl, isHeader,
+      prev: entry.montant,
+      real,
+      budget: Math.max(entry.montant, real), // pré-remplissage MAX(préc, réel)
+      comment: '',
+    });
+  }
+  return lines;
+}
+
+// ÉTAPE 2 — Pré-remplissage et ajustement automatique
+function BudgetStep2({ data, hypo, onNext, onBack }) {
+  const lines = useMemo(() => buildBudgetLines(data), [data]);
+  // Total alloué = somme des lignes CAT3 uniquement (les headers sont des totaux)
+  const totalAlloue = lines.filter(l=>!l.isHeader).reduce((s,l)=>s+l.budget, 0);
+  const solde = hypo.budgetDispo - totalAlloue;
+
+  // Recalcul des totaux CAT2 pour affichage
+  const headerTotals = {};
+  let curHeader = null;
+  for (const l of lines) {
+    if (l.isHeader) { curHeader = l.nl; headerTotals[curHeader] = 0; }
+    else if (curHeader) headerTotals[curHeader] += l.budget;
+  }
+
+  return (
+    <div className="card">
+      <div className="flex-between mb-2">
+        <h2>📋 Détail du budget — ajustement automatique</h2>
+      </div>
+      <div className="notice notice-ia mb-2" style={{fontSize:12}}>
+        Chaque ligne est pré-remplie avec le maximum entre le budget précédent et le réel déjà consommé.
+        Les lignes 🟠 ont été relevées automatiquement car le réel dépassait l'enveloppe.
+      </div>
+
+      {/* Bandeau solde */}
+      <div className="flex-between" style={{position:'sticky',top:0,background:'var(--bg)',
+        padding:'8px 0',borderBottom:'.5px solid var(--brd)',marginBottom:'.75rem',fontSize:13,zIndex:5}}>
+        <span>Budget disponible : <strong>{fmtEur(hypo.budgetDispo)}</strong></span>
+        <span>Alloué : <strong>{fmtEur(totalAlloue)}</strong></span>
+        <span style={{color: solde>=0 ? 'var(--gr-fg)':'var(--rd-fg)',fontWeight:700}}>
+          {solde>=0?'✓ ':'⚠️ '}{solde>=0?'+':''}{fmtEur(solde)}
+        </span>
+      </div>
+
+      {/* Liste */}
+      <div style={{display:'flex',flexDirection:'column',gap:2,marginBottom:'1.25rem'}}>
+        {lines.map((l,idx) => {
+          if (l.isHeader) return (
+            <div key={idx} style={{display:'flex',justifyContent:'space-between',
+              fontWeight:700,padding:'8px 6px',marginTop:6,background:'var(--bg2)',borderRadius:4}}>
+              <span>{l.rawLabel}</span><span>{fmtEur(headerTotals[l.nl]||0)}</span>
+            </div>
+          );
+          const delta = Math.round(l.budget) - Math.round(l.prev);
+          const ajuste = delta > 0;
+          return (
+            <div key={idx} style={{display:'flex',alignItems:'center',gap:8,
+              padding:'5px 6px 5px 18px',fontSize:13}}>
+              <span style={{flex:1}}>{l.label}</span>
+              <span style={{fontSize:11,color:'var(--txt2)',whiteSpace:'nowrap'}}>
+                Réel: {fmtEur(l.real)} · Préc: {fmtEur(l.prev)}
+              </span>
+              <span style={{width:90,textAlign:'right',fontWeight:600}}>{fmtEur(l.budget)}</span>
+              <span style={{width:80,fontSize:11,color: ajuste?'var(--am-fg)':'var(--txt2)'}}>
+                {ajuste ? `🟠 +${fmtEur(delta)}` : '✓'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex" style={{justifyContent:'space-between'}}>
+        <button className="btn-ghost" onClick={onBack}>← Hypothèses</button>
+        <button className="btn-green" onClick={()=>onNext(lines)}>Passer à l'ajustement →</button>
+      </div>
+    </div>
+  );
+}
+
+// ÉTAPE 3 — Ajustement manuel et équilibrage
+// Ligne éditable : 2 champs liés (Provision + Total). Total = Réel + Provision.
+// Contrôle différé (blur / Enter), flash rouge si Total < réel (provision < 0).
+function BudgetRow({ line, onCommit, onComment, commentOpen, onToggleComment }) {
+  const [draftTotal, setDraftTotal] = useState(fmtEur(line.budget));
+  const [draftProv,  setDraftProv]  = useState(fmtEur(Math.max(0, line.budget - line.real)));
+  const [invalid, setInvalid] = useState(false);
+  const totalRef = useRef(null);
+  const provRef  = useRef(null);
+
+  // Resync depuis le parent quand aucun des 2 champs n'est focus
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active !== totalRef.current && active !== provRef.current) {
+      setDraftTotal(fmtEur(line.budget));
+      setDraftProv(fmtEur(Math.max(0, line.budget - line.real)));
+    }
+  }, [line.budget, line.real]);
+
+  const parse = (s) => parseFloat(String(s).replace(/[^\d.-]/g,'')) || 0;
+
+  const flashInvalid = () => { setInvalid(true); setTimeout(()=>setInvalid(false), 2000); };
+
+  // Commit depuis le champ TOTAL
+  const commitTotal = () => {
+    const total = parse(draftTotal);
+    if (total < line.real) {
+      onCommit(line.real);
+      setDraftTotal(fmtEur(line.real));
+      setDraftProv(fmtEur(0));
+      flashInvalid();
+    } else {
+      onCommit(total);
+      setDraftTotal(fmtEur(total));
+      setDraftProv(fmtEur(total - line.real));
+    }
+  };
+  // Commit depuis le champ PROVISION (toujours ≥ 0)
+  const commitProv = () => {
+    let prov = parse(draftProv);
+    if (prov < 0) { prov = 0; flashInvalid(); }
+    const total = line.real + prov;
+    onCommit(total);
+    setDraftProv(fmtEur(prov));
+    setDraftTotal(fmtEur(total));
+  };
+
+  const enterBlur = (e) => { if (e.key==='Enter'){ e.preventDefault(); e.target.blur(); } };
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 6px 5px 18px',fontSize:13}}>
+        <span style={{flex:1}}>{line.label}</span>
+        <span style={{fontSize:11,color:'var(--txt2)',whiteSpace:'nowrap'}}>Réel: {fmtEur(line.real)}</span>
+        {/* Provision */}
+        <div style={{display:'flex',alignItems:'center',gap:3}}>
+          <span style={{fontSize:10,color:'var(--txt2)'}}>Prov.</span>
+          <input ref={provRef} className="inp" type="text" value={draftProv}
+            onChange={e=>setDraftProv(e.target.value)}
+            onBlur={commitProv} onKeyDown={enterBlur}
+            style={{width:88,textAlign:'right',fontSize:12}}/>
+        </div>
+        {/* Total */}
+        <div style={{display:'flex',alignItems:'center',gap:3,position:'relative'}}>
+          <span style={{fontSize:10,color:'var(--txt2)'}}>Total</span>
+          <input ref={totalRef} className="inp" type="text" value={draftTotal}
+            onChange={e=>setDraftTotal(e.target.value)}
+            onBlur={commitTotal} onKeyDown={enterBlur}
+            style={{width:96,textAlign:'right',fontWeight:600,
+              borderColor: invalid ? 'var(--rd-fg)' : undefined,
+              color: invalid ? 'var(--rd-fg)' : undefined,
+              transition:'border-color .2s, color .2s'}}/>
+          {invalid && (
+            <div style={{position:'absolute',right:0,top:'100%',fontSize:10,
+              color:'var(--rd-fg)',whiteSpace:'nowrap',marginTop:2}}>
+              min : {fmtEur(line.real)}
+            </div>
+          )}
+        </div>
+        <button className="btn-ghost" style={{padding:'2px 6px',fontSize:13}}
+          onClick={onToggleComment}>💬</button>
+      </div>
+      {commentOpen && (
+        <div style={{padding:'4px 6px 8px 18px'}}>
+          <input className="inp" value={line.comment} placeholder="Commentaire (justification de l'évolution)…"
+            onChange={e=>onComment(e.target.value)} style={{width:'100%',fontSize:12}}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BudgetStep3({ data, hypo, initialLines, onNext, onBack }) {
+  const [lines, setLines] = useState(initialLines);
+  const [openComment, setOpenComment] = useState(null);
+
+  // Commit d'un montant validé par index (le contrôle plancher est fait dans BudgetRow)
+  const commitBudget = useCallback((idx, value) => {
+    setLines(prev => prev.map((l,i) => i===idx ? {...l, budget: value} : l));
+  }, []);
+  const updateComment = (idx, val) =>
+    setLines(prev => prev.map((l,i) => i===idx ? {...l, comment:val} : l));
+
+  const totalAlloue = lines.filter(l=>!l.isHeader).reduce((s,l)=>s+l.budget, 0);
+  const solde = hypo.budgetDispo - totalAlloue;
+  const equilibre = Math.abs(solde) < 1;
+
+  const headerTotals = {};
+  let curHeader = null;
+  for (const l of lines) {
+    if (l.isHeader) { curHeader = l.nl; headerTotals[curHeader] = 0; }
+    else if (curHeader) headerTotals[curHeader] += l.budget;
+  }
+
+  // Force le commit de tout champ en édition avant de quitter l'étape
+  const flushAndGo = (fn) => {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+      document.activeElement.blur(); // déclenche le commit du champ actif
+      setTimeout(() => fn(lines), 50); // laisse le state se mettre à jour
+    } else {
+      fn(lines);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2 style={{marginBottom:'.5rem'}}>⚖️ Ajustement et équilibrage</h2>
+      <div className="notice notice-ia mb-2" style={{fontSize:12}}>
+        Deux façons d'éditer chaque ligne : <strong>Total</strong> (enveloppe complète) ou <strong>Prov.</strong> (provision = ce qui reste à dépenser au-delà du réel déjà consommé). Total = Réel + Provision.
+      </div>
+
+      {/* Bandeau solde */}
+      <div style={{position:'sticky',top:0,background: equilibre?'var(--gr-bg)':'var(--rd-bg)',
+        padding:'10px 12px',borderRadius:8,marginBottom:'1rem',zIndex:5,
+        border:`.5px solid ${equilibre?'var(--gr-fg)':'var(--rd-fg)'}`}}>
+        <div className="flex-between" style={{fontSize:13}}>
+          <span>Budget disponible : <strong>{fmtEur(hypo.budgetDispo)}</strong> · Alloué : <strong>{fmtEur(totalAlloue)}</strong></span>
+          <span style={{fontWeight:700,color: solde>=0?'var(--gr-fg)':'var(--rd-fg)'}}>
+            {equilibre ? '✓ Budget équilibré' : `${solde>=0?'À allouer : +':'À réduire : '}${fmtEur(solde)}`}
+          </span>
+        </div>
+      </div>
+
+      {/* Liste éditable */}
+      <div style={{display:'flex',flexDirection:'column',gap:2,marginBottom:'1.25rem'}}>
+        {lines.map((l,idx) => {
+          if (l.isHeader) return (
+            <div key={idx} style={{display:'flex',justifyContent:'space-between',
+              fontWeight:700,padding:'8px 6px',marginTop:6,background:'var(--bg2)',borderRadius:4}}>
+              <span>{l.rawLabel}</span><span>{fmtEur(headerTotals[l.nl]||0)}</span>
+            </div>
+          );
+          return (
+            <BudgetRow key={idx} line={l}
+              onCommit={(value)=>commitBudget(idx, value)}
+              onComment={(val)=>updateComment(idx,val)}
+              commentOpen={openComment===idx}
+              onToggleComment={()=>setOpenComment(openComment===idx?null:idx)}/>
+          );
+        })}
+      </div>
+
+      <div className="flex" style={{justifyContent:'space-between'}}>
+        <button className="btn-ghost" onClick={()=>flushAndGo(onBack)}>← Retour</button>
+        <button className={equilibre?'btn-green':'btn-ghost'} disabled={!equilibre}
+          onClick={()=>flushAndGo(onNext)}>
+          {equilibre ? 'Exporter →' : '⚠️ Budget non équilibré'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Construit les lignes TSV (format Historisation : Montant / Écart / Commentaire)
+function buildBudgetTSV(data, hypo, lines) {
+  const rows = [];
+  const esc = v => String(v ?? '');
+  const ecartCell = (nv, pv) => { const e = Math.round(nv - pv); return e === 0 ? '' : String(e); };
+
+  // Commentaire récapitulatif des hypothèses de charges
+  const cp = hypo.chargesProj;
+  const chargesComment = cp
+    ? `Réel révolu ${fmtEur(cp.realPast)} + projeté ${fmtEur(cp.projected)} (inflation ${hypo.inflation}%) = ${fmtEur(cp.total)} sur 11 ans`
+    : '';
+
+  // L1 : nom du budget
+  rows.push([hypo.nom, '', '']);
+  // L2 : période / écart / commentaires
+  rows.push([hypo.periode, 'écart', `Commentaires ${hypo.periode}`]);
+  // L3 : apports
+  rows.push([String(Math.round(hypo.apports)), '', '']);
+  // L4 : achats
+  rows.push([String(Math.round(hypo.achats)), '', '']);
+  // L5 : charges (avec récap hypothèses en commentaire)
+  rows.push([String(Math.round(hypo.charges)), ecartCell(hypo.charges, data.lastChargesEstimate), chargesComment]);
+  // L6 : budget estimatif à répartir
+  const lastEstim = data.structural?.budgetEstimatif || 0;
+  rows.push([String(Math.round(hypo.budgetDispo)), ecartCell(hypo.budgetDispo, lastEstim), '']);
+  // L7 : travaux & investissements (= budget dispo)
+  rows.push([String(Math.round(hypo.budgetDispo)), ecartCell(hypo.budgetDispo, lastEstim), '']);
+  // L8+ : détail travaux
+  for (const l of lines) {
+    if (l.isHeader) {
+      // CAT2 = total de section ; pas de provision sur les en-têtes
+      rows.push([String(Math.round(l.budget)), ecartCell(l.budget, l.prev), esc(l.comment)]);
+    } else {
+      // CAT3 : commentaire = "Provision = X€" + commentaire libre éventuel
+      const provision = Math.max(0, Math.round(l.budget - l.real));
+      const provText = `Provision = ${fmtEur(provision)}`;
+      const fullComment = l.comment ? `${provText} · ${l.comment}` : provText;
+      rows.push([String(Math.round(l.budget)), ecartCell(l.budget, l.prev), fullComment]);
+    }
+  }
+  return rows.map(r => r.join('\t')).join('\n');
+}
+
+// ÉTAPE 4 — Export
+function BudgetStep4({ data, hypo, lines, onBack }) {
+  const downloadTSV = () => {
+    const tsv = buildBudgetTSV(data, hypo, lines);
+    const blob = new Blob([tsv], { type:'text/tab-separated-values' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LMDJP_${hypo.periode.replace(/\s+/g,'_')}_${todayISO()}.tsv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="card card-sm">
+      <h2 style={{marginBottom:'1rem'}}>✅ {hypo.nom}</h2>
+      <div className="notice notice-gr mb-2">Budget équilibré et prêt à exporter.</div>
+      <ol style={{fontSize:13,color:'var(--txt2)',lineHeight:1.8,paddingLeft:18}}>
+        <li>Télécharge le TSV ci-dessous</li>
+        <li>Ouvre-le, sélectionne tout (Cmd+A), copie (Cmd+C)</li>
+        <li>Dans l'onglet "Historisation budgets", colonne du nouveau budget, cellule du haut</li>
+        <li>Colle sans mise en forme (Ctrl+Shift+V)</li>
+        <li>Tire la formule d'écart de la colonne précédente sur la nouvelle colonne</li>
+      </ol>
+      <div className="flex" style={{justifyContent:'space-between',marginTop:'1.25rem'}}>
+        <button className="btn-ghost" onClick={onBack}>← Ajustement</button>
+        <button className="btn-green" onClick={downloadTSV}>↓ Télécharger TSV</button>
+      </div>
+    </div>
+  );
+}
+
+// CONTENEUR — orchestration des 4 étapes budget
+function BudgetFlow({ onHome }) {
+  const [phase, setPhase] = useState('loading'); // loading | error | s1 | s2 | s3 | s4
+  const [data, setData]   = useState(null);
+  const [hypo, setHypo]   = useState(null);
+  const [lines, setLines] = useState([]);
+
+  useEffect(() => {
+    fetchBudgetData().then(d => {
+      const hasCharges = d && Object.keys(d.annualTotals).length > 0;
+      const hasBudget  = d && d.lastBudgetOrder.length > 0;
+      if (!hasCharges || !hasBudget) { setData(d); setPhase('error'); return; }
+      setData(d); setPhase('s1');
+    }).catch(() => setPhase('error'));
+  }, []);
+
+  // Avertissement à la fermeture pendant l'édition
+  useEffect(() => {
+    if (phase === 's2' || phase === 's3') {
+      const h = (e) => { e.preventDefault(); e.returnValue = ''; };
+      window.addEventListener('beforeunload', h);
+      return () => window.removeEventListener('beforeunload', h);
+    }
+  }, [phase]);
+
+  if (phase === 'loading') return (
+    <div className="card card-sm"><div className="notice" style={{color:'var(--txt2)'}}>
+      <span className="spin"/> Chargement des données budgétaires…
+    </div></div>
+  );
+  if (phase === 'error') return (
+    <div className="card card-sm">
+      <div className="notice notice-rd" style={{marginBottom:'.75rem'}}>
+        Impossible de charger toutes les données du Google Sheet.
+        {data?.failed?.length > 0 && (
+          <div style={{marginTop:8,fontSize:12}}>
+            Onglets sans réponse : {data.failed.join(', ')}.
+          </div>
+        )}
+        <div style={{marginTop:8,fontSize:12}}>
+          Vérifie que le fichier est partagé en lecture (« Tous les utilisateurs disposant du lien ») et que les noms d'onglets n'ont pas changé.
+        </div>
+      </div>
+      {data?.debug && (
+        <pre style={{fontSize:11,background:'var(--bg2)',padding:10,borderRadius:6,
+          overflow:'auto',color:'var(--txt2)',marginBottom:'.75rem'}}>
+{JSON.stringify(data.debug, null, 2)}
+        </pre>
+      )}
+      <div className="flex" style={{gap:8}}>
+        <button className="btn-ghost" onClick={onHome}>← Accueil</button>
+        <button className="btn-ghost" onClick={()=>{setPhase('loading');fetchBudgetData().then(d=>{
+          const ok = d && Object.keys(d.annualTotals).length>0 && d.lastBudgetOrder.length>0;
+          setData(d); setPhase(ok?'s1':'error');
+        });}}>↻ Réessayer</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {phase==='s1' && <BudgetStep1 data={data} onNext={h=>{setHypo(h);setPhase('s2');}}/>}
+      {phase==='s2' && <BudgetStep2 data={data} hypo={hypo}
+        onNext={l=>{setLines(l);setPhase('s3');}} onBack={()=>setPhase('s1')}/>}
+      {phase==='s3' && <BudgetStep3 data={data} hypo={hypo} initialLines={lines}
+        onNext={l=>{setLines(l);setPhase('s4');}} onBack={l=>{setLines(l);setPhase('s2');}}/>}
+      {phase==='s4' && <BudgetStep4 data={data} hypo={hypo} lines={lines}
+        onBack={()=>setPhase('s3')}/>}
+    </>
+  );
+}
+
+// ─── HOME SCREEN ──────────────────────────────────────────────────────────────
+
+function HomeScreen({ onJournal, onBudget, onSettings }) {
+  const SHEET_URL_JOURNAL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
+
+  const cards = [
+    {
+      icon: '📒',
+      title: 'Ouvrir le Google Sheet',
+      desc: 'Consulter le journal comptable',
+      active: true,
+      action: () => window.open(SHEET_URL_JOURNAL, '_blank'),
+      cta: 'Ouvrir ↗',
+      ctaStyle: 'ghost',
+    },
+    {
+      icon: '✏️',
+      title: 'Mettre à jour le journal',
+      desc: 'Importer le CSV Shine et catégoriser les nouvelles transactions',
+      active: true,
+      action: onJournal,
+      cta: 'Démarrer →',
+      ctaStyle: 'primary',
+    },
+    {
+      icon: '📊',
+      title: 'Construire un budget',
+      desc: 'Créer ou mettre à jour le budget prévisionnel de la SCI',
+      active: true,
+      action: onBudget,
+      cta: 'Démarrer →',
+      ctaStyle: 'primary',
+    },
+    {
+      icon: '📖',
+      title: 'Documentation',
+      desc: "Guide d'utilisation de la comptabilité et de la web app",
+      active: false,
+    },
+  ];
+
+  return (
+    <div className="container" style={{maxWidth:780}}>
+      {/* Header */}
+      <div style={{textAlign:'center',padding:'2.5rem 0 2rem'}}>
+        <h1 style={{fontSize:26,fontWeight:700,marginBottom:'.4rem'}}>La Maison des Jean-Pierre</h1>
+        <div style={{fontSize:13,color:'var(--txt2)'}}>SCI — Étais-la-Sauvin (89)</div>
+      </div>
+
+      {/* Menu cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:'1rem',marginBottom:'2rem'}}>
+        {cards.map((card, i) => (
+          <div key={i} style={{
+            background:'var(--bg2)',
+            border:`.5px solid ${card.active?'var(--brd)':'var(--brd)'}`,
+            borderRadius:12,
+            padding:'1.5rem',
+            opacity: card.active ? 1 : 0.45,
+            display:'flex',flexDirection:'column',gap:'.75rem',
+          }}>
+            <div style={{fontSize:28}}>{card.icon}</div>
+            <div>
+              <div style={{fontWeight:600,fontSize:15,marginBottom:'.25rem'}}>{card.title}</div>
+              <div style={{fontSize:12,color:'var(--txt2)',lineHeight:1.5}}>{card.desc}</div>
+            </div>
+            <div style={{marginTop:'auto'}}>
+              {card.active ? (
+                card.ctaStyle === 'primary'
+                  ? <button className="btn" onClick={card.action} style={{width:'100%',justifyContent:'center'}}>{card.cta}</button>
+                  : <button className="btn-ghost" onClick={card.action} style={{width:'100%',justifyContent:'center'}}>{card.cta}</button>
+              ) : (
+                <span style={{fontSize:11,background:'var(--brd)',color:'var(--txt2)',
+                  padding:'3px 10px',borderRadius:20,fontWeight:500}}>Bientôt disponible</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer settings */}
+      <div style={{textAlign:'center'}}>
+        <button className="btn-ghost" onClick={onSettings} style={{fontSize:12,padding:'6px 14px'}}>
+          ⚙️ Paramètres
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [screen, setScreen] = useState('home'); // 'home' | 'journal' | 'budget'
+  const [step,   setStep]   = useState(1);
+  const [ss,     setSS]     = useState({1:'active',2:'todo',3:'todo',4:'todo',5:'todo',6:'todo'});
+  const [showSettings, setShowSettings] = useState(false);
+  const [dateArret,    setDateArret]    = useState('');
+  const [rawTxs,       setRawTxs]      = useState([]);
+  const [builtRows,    setBuiltRows]   = useState([]);
+  const [exportRows,   setExportRows]  = useState([]);
+  const [rembos, setRembos] = useState([]);
+
+  const done  = n => setSS(p => ({...p,[n]:'done'}));
+  const skip  = n => setSS(p => ({...p,[n]:'skip'}));
+  const go    = n => setStep(n);
+
+  const startJournal = () => {
+    // Reset funnel state when re-entering
+    setStep(1);
+    setSS({1:'active',2:'todo',3:'todo',4:'todo',5:'todo',6:'todo'});
+    setScreen('journal');
+  };
+
+  const h1 = d  => { setDateArret(d); done(1); setStep(2); };
+  const h2 = txs => { setRawTxs(txs); done(2); setStep(3); };
+  const h3 = result => {
+    setBuiltRows(result.rows || []);
+    setRembos((result.remboursements||[]).map((r,i)=>({...r, id:r.id||`r${i}`, montant:parseFloat(r.montant)||0})));
+    done(3); setStep(4);
+  };
+  const h3skip = () => { setBuiltRows(buildRows(rawTxs, [])); skip(3); setStep(4); };
+  const h4     = rb  => { setRembos(rb); done(4); setStep(5); };
+  const h4skip = ()  => { skip(4); setStep(5); };
+  const h5     = txs => { setExportRows(txs); done(5); setStep(6); };
+
+  // Home screen
+  if (screen === 'home') return (
+    <>
+      <HomeScreen onJournal={startJournal} onBudget={()=>setScreen('budget')} onSettings={() => setShowSettings(true)}/>
+      {showSettings && <SettingsModal onClose={()=>setShowSettings(false)}/>}
+    </>
+  );
+
+  // Budget flow
+  if (screen === 'budget') return (
+    <div className="container">
+      <div className="flex-between" style={{marginBottom:'1.5rem'}}>
+        <div className="flex" style={{gap:'.75rem',alignItems:'center'}}>
+          <button className="btn-ghost" onClick={() => setScreen('home')}
+            style={{fontSize:13,padding:'6px 12px'}}>← Accueil</button>
+          <div>
+            <h1 style={{fontSize:17}}>Construire un budget</h1>
+            <div style={{fontSize:11,color:'var(--txt2)',marginTop:1}}>La Maison des JP — Étais-la-Sauvin</div>
+          </div>
+        </div>
+      </div>
+      <BudgetFlow onHome={()=>setScreen('home')}/>
+    </div>
+  );
+
+  // Journal funnel
+  return (
+    <div className="container">
+      <div className="flex-between" style={{marginBottom:'1.5rem'}}>
+        <div className="flex" style={{gap:'.75rem',alignItems:'center'}}>
+          <button className="btn-ghost" onClick={() => setScreen('home')}
+            style={{fontSize:13,padding:'6px 12px'}}>← Accueil</button>
+          <div>
+            <h1 style={{fontSize:17}}>Mise à jour du journal</h1>
+            <div style={{fontSize:11,color:'var(--txt2)',marginTop:1}}>La Maison des JP — Étais-la-Sauvin</div>
+          </div>
+        </div>
+        <button className="btn-ghost" onClick={()=>setShowSettings(true)} style={{fontSize:18,padding:'6px 12px'}}>⚙️</button>
+      </div>
+
+      <StepNav step={step} ss={ss} onGo={go}/>
+
+      {step===1 && <Step1 onNext={h1}/>}
+      {step===2 && <Step2 dateArret={dateArret} onNext={h2}/>}
+      {step===3 && <Step3 rawTransactions={rawTxs} onNext={h3} onSkip={h3skip}/>}
+      {step===4 && <Step4 remboursements={rembos} rawTxs={rawTxs} onNext={h4} onSkip={h4skip}/>}
+      {step===5 && <Step5 transactions={builtRows} matchings={[]} onNext={h5}/>}
+      {step===6 && <Step6 transactions={exportRows} onBack={()=>setStep(5)}/>}
+
+      {showSettings && <SettingsModal onClose={()=>setShowSettings(false)}/>}
+    </div>
+  );
+}
+
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      const e = this.state.error;
+      return (
+        <div style={{padding:'2rem',maxWidth:700,margin:'0 auto'}}>
+          <div style={{background:'#fce4ec',border:'.5px solid #c62828',borderRadius:10,padding:'1.5rem'}}>
+            <h2 style={{color:'#c62828',marginBottom:'1rem'}}>❌ Erreur de rendu</h2>
+            <p style={{fontSize:13,marginBottom:'.75rem',color:'#333'}}>{e.toString()}</p>
+            <pre style={{fontSize:11,background:'#fff',padding:'1rem',borderRadius:6,
+              overflow:'auto',maxHeight:300,color:'#555',lineHeight:1.5}}>
+              {e.stack}
+            </pre>
+            <button onClick={()=>window.location.reload()}
+              style={{marginTop:'1rem',padding:'9px 18px',background:'#c62828',color:'#fff',
+                border:'none',borderRadius:7,cursor:'pointer',fontFamily:'inherit',fontSize:13}}>
+              Recharger l'app
+            </button>
+          </div>
+          <p style={{fontSize:11,color:'#888',marginTop:'1rem'}}>
+            Copie ce message et envoie-le pour débogage.
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary><App/></ErrorBoundary>
+);
+</script>
+</body>
+</html>
