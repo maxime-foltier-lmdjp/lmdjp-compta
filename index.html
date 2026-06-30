@@ -114,6 +114,32 @@ label{font-size:13px;font-weight:500;display:block;margin-bottom:.35rem;color:va
 .stat-lbl{font-size:11px;color:var(--txt2);margin-bottom:4px}
 .stat-val{font-size:20px;font-weight:700}
 .rib-notice{background:var(--am-bg);border:.5px solid var(--am-fg);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:var(--am-fg)}
+/* Documentation */
+.doc-tabs{display:flex;gap:6px;margin-bottom:1rem;border-bottom:.5px solid var(--brd)}
+.doc-tab{padding:9px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--txt2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:-1px}
+.doc-tab:hover{color:var(--txt)}
+.doc-tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.doc-content{line-height:1.6;font-size:14px}
+.doc-content h1{font-size:20px;margin:0 0 .75rem}
+.doc-content h2{font-size:17px;margin:1.5rem 0 .6rem;padding-top:.75rem;border-top:.5px solid var(--brd)}
+.doc-content h3{font-size:15px;margin:1.25rem 0 .5rem}
+.doc-content h4{font-size:14px;margin:1rem 0 .4rem;color:var(--txt2)}
+.doc-content p{margin:.5rem 0}
+.doc-content ul,.doc-content ol{margin:.5rem 0;padding-left:1.4rem}
+.doc-content li{margin:.25rem 0}
+.doc-content code{background:var(--bg2);padding:1px 5px;border-radius:4px;font-size:12px;font-family:ui-monospace,monospace}
+.doc-content a{color:var(--ac);word-break:break-word}
+.doc-content hr{border:none;border-top:.5px solid var(--brd);margin:1rem 0}
+.doc-content blockquote{background:var(--bg2);border-left:3px solid var(--ac);margin:.6rem 0;padding:8px 12px;border-radius:0 6px 6px 0;font-size:13px;color:var(--txt2)}
+.doc-tablewrap{overflow-x:auto;margin:.75rem 0}
+.doc-content table{border-collapse:collapse;width:100%;font-size:12.5px}
+.doc-content th,.doc-content td{border:.5px solid var(--brd);padding:6px 9px;text-align:left;vertical-align:top}
+.doc-content th{background:var(--bg2);font-weight:600}
+.doc-codeblock{position:relative;margin:.75rem 0}
+.doc-codeblock pre{background:var(--bg2);border:.5px solid var(--brd);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:12px;font-family:ui-monospace,monospace;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.doc-copy{position:absolute;top:8px;right:8px;background:var(--ac);color:var(--bg);border:none;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;z-index:2}
+.doc-copy:hover{opacity:.85}
+.doc-img{max-width:100%;height:auto;border:.5px solid var(--brd);border-radius:8px;margin:.5rem 0;display:block}
 </style>
 </head>
 <body>
@@ -2370,6 +2396,21 @@ function buildBudgetTSV(data, hypo, lines) {
     ? `Réel révolu ${fmtEur(cp.realPast)} + projeté ${fmtEur(cp.projected)} (inflation ${hypo.inflation}%) = ${fmtEur(cp.total)} sur 11 ans`
     : '';
 
+  // Pré-calcul : chaque CAT2 (header) = somme des CAT3 ARRONDIES qui suivent
+  // (on arrondit chaque CAT3 d'abord, puis on somme → cohérence parfaite avec
+  //  ce qu'on voit en additionnant les lignes affichées, pas de dérive de centimes).
+  const headerSum = {};
+  let totalTravaux = 0;
+  let curHeaderIdx = null;
+  lines.forEach((l, i) => {
+    if (l.isHeader) { curHeaderIdx = i; headerSum[i] = 0; }
+    else {
+      const rounded = Math.round(l.budget);
+      if (curHeaderIdx != null) headerSum[curHeaderIdx] += rounded;
+      totalTravaux += rounded;
+    }
+  });
+
   // L1 : nom du budget
   rows.push([hypo.nom, '', '']);
   // L2 : période / écart / commentaires
@@ -2380,16 +2421,17 @@ function buildBudgetTSV(data, hypo, lines) {
   rows.push([String(Math.round(hypo.achats)), '', '']);
   // L5 : charges (avec récap hypothèses en commentaire)
   rows.push([String(Math.round(hypo.charges)), ecartCell(hypo.charges, data.lastChargesEstimate), chargesComment]);
-  // L6 : budget estimatif à répartir
+  // L6 : budget estimatif à répartir = total travaux (cohérence stricte L6 = L7)
   const lastEstim = data.structural?.budgetEstimatif || 0;
-  rows.push([String(Math.round(hypo.budgetDispo)), ecartCell(hypo.budgetDispo, lastEstim), '']);
-  // L7 : travaux & investissements (= budget dispo)
-  rows.push([String(Math.round(hypo.budgetDispo)), ecartCell(hypo.budgetDispo, lastEstim), '']);
+  rows.push([String(totalTravaux), ecartCell(totalTravaux, lastEstim), '']);
+  // L7 : travaux & investissements = somme de toutes les CAT3
+  rows.push([String(totalTravaux), ecartCell(totalTravaux, lastEstim), '']);
   // L8+ : détail travaux
-  for (const l of lines) {
+  lines.forEach((l, i) => {
     if (l.isHeader) {
-      // CAT2 = total de section ; pas de provision sur les en-têtes
-      rows.push([String(Math.round(l.budget)), ecartCell(l.budget, l.prev), esc(l.comment)]);
+      // CAT2 = somme de ses CAT3 arrondies (déjà entier, cohérence parfaite)
+      const sum = headerSum[i] || 0;
+      rows.push([String(sum), ecartCell(sum, l.prev), esc(l.comment)]);
     } else {
       // CAT3 : commentaire = "Provision = X€" + commentaire libre éventuel
       const provision = Math.max(0, Math.round(l.budget - l.real));
@@ -2397,7 +2439,7 @@ function buildBudgetTSV(data, hypo, lines) {
       const fullComment = l.comment ? `${provText} · ${l.comment}` : provText;
       rows.push([String(Math.round(l.budget)), ecartCell(l.budget, l.prev), fullComment]);
     }
-  }
+  });
   return rows.map(r => r.join('\t')).join('\n');
 }
 
@@ -2505,9 +2547,532 @@ function BudgetFlow({ onHome }) {
   );
 }
 
+
+const DOC_PARTS = {
+  p1: `# PARTIE 1 — COMPRENDRE LA COMPTABILITÉ DE LMDJP
+
+## 1.1 Pourquoi faire ?
+
+Comme toute structure qui reçoit et dépense de l'argent en commun, la SCI a besoin d'une comptabilité — pour trois raisons concrètes :
+
+**Savoir où on en est.** Combien la maison a coûté, combien il reste dans les caisses, combien chaque associé a apporté. Sans suivi, on navigue à l'aveugle.
+
+**Être juste entre associés.** Quand l'un avance des frais sur sa carte perso, il doit être remboursé. Quand quelqu'un paie pour la JPP, ça doit être tracé. La compta garantit que personne n'est lésé.
+
+**Préparer l'avenir.** La SCI a une durée de vie de 11 ans (2022–2032). Sur cette période, on dispose d'une enveloppe finie. La compta permet de budgéter les travaux pour ne pas se retrouver à sec avant la fin.
+
+Le choix a été fait d'une **comptabilité de trésorerie** : on enregistre les flux d'argent réels au fil de l'eau (ce qui entre, ce qui sort), plutôt qu'une comptabilité d'engagement plus lourde. C'est suffisant pour une SCI familiale sans activité locative.
+
+## 1.2 Les outils et leur accès
+
+La comptabilité repose sur quatre outils qui se complètent :
+
+**La banque Shine** — le compte de la SCI. Une carte bancaire partagée sert aux dépenses courantes. Tous les mouvements (entrées et sorties) y sont enregistrés : c'est la source de vérité brute.
+
+**Le Google Sheet "Compta LMDJP"** — le registre central. Il contient le journal de toutes les opérations catégorisées, plus des tableaux de synthèse (trésorerie, charges, suivi des travaux, budgets). C'est là qu'on lit l'état réel des finances.
+> Accès : https://docs.google.com/spreadsheets/d/1kkK7F3OxQs1lVUnBZqBpX1ZxABN38seb2wmsSmH5Sgo/edit?usp=sharing
+> Les associés y ont accès en **lecture seule** (lien public Lecteur). Seul le comptable, propriétaire, peut modifier. Un raccourci vers ce fichier figure dans le dossier Drive "SCI LMDJP".
+
+**La web app de comptabilité** — l'outil du comptable. Une page web qui automatise les tâches répétitives : importer le relevé bancaire, catégoriser les dépenses, calculer les remboursements, construire les budgets.
+> Accès : https://maxime-foltier-lmdjp.github.io/lmdjp-compta/ (ouvrable depuis n'importe quel ordinateur, rien à installer)
+
+**Le groupe Messenger "Le gouffre financier"** — le canal de déclaration. C'est là que chaque associé signale ses avances de frais pour être remboursé. Bien utilisé, il alimente directement la web app.
+
+## 1.3 Principaux process et bonnes pratiques
+
+### Le cycle de la compta
+
+Une fois par trimestre environ, le comptable :
+1. Exporte le relevé bancaire depuis Shine
+2. Lance la web app et importe ce relevé
+3. Récupère le contexte du groupe Messenger (qui a payé quoi)
+4. Catégorise les nouvelles dépenses
+5. Déclenche les remboursements dus aux associés
+6. Colle le résultat dans le Google Sheet
+7. Met à jour le budget si nécessaire (nouvelle estimation des enveloppes de travaux)
+
+### Bonne pratique n°1 — Déclarer ses avances correctement
+
+Quand tu paies une dépense de la maison **avec ta carte perso**, tu dois être remboursé. Pour que ce soit automatique, écris dans le groupe Messenger en respectant ce format :
+
+> *« [montant] payé par [ton prénom] pour [motif] »*
+> Exemple : « 43€25 payé par Hecto pour essence tondeuse »
+
+Les montants peuvent s'écrire de plein de façons (43€, 43,25€, 43€25, EUR 43) — toutes sont reconnues.
+
+### Bonne pratique n°2 — Signaler les dépenses carte Shine
+
+Quand tu paies **avec la carte Shine** (pas besoin de remboursement), mentionne quand même "Shine" dans ton message. Ça aide le comptable à catégoriser sans avoir à enquêter.
+
+> Exemple : « 109,97€ pour peinture cuisine payé par carte Shine »
+
+### Bonne pratique n°3 — Les dépenses qui ne concernent pas la SCI
+
+- Les **dépenses courantes de la maison** lors des week-ends (les courses, par exemple) passent par le Tricount entre les présents, pas par la compta SCI
+- Les dépenses **en espèces** (la fameuse caisse de "l'âne") ne passent pas par Shine, donc difficiles à tracer — à éviter, mais si c'est obligatoire, penser à bien le déclarer en donnant un maximum de contexte sur Messenger
+
+### Bonne pratique n°4 — Valider les grosses dépenses en AG
+
+Une dépense importante non prévue de plus de 200 € (le piano, par exemple) doit être validée en assemblée, avec un budget maximum, avant d'engager l'argent de la SCI.
+
+En revanche, toutes les petites dépenses qui participent à équiper la maison, remplacer des éléments consommés ou réparer ce qui est cassé ne sont pas à voter en AG — elles sont au contraire largement souhaitées.
+
+## 1.4 Règles comptables
+
+### La date qui compte : la date de valeur
+
+On enregistre toujours la **date de valeur** (quand l'argent est effectivement débité du compte), jamais la date d'opération (quand tu tapes ta carte). Les deux peuvent différer d'un ou deux jours.
+
+### Le sens des montants
+
+- Une **sortie** d'argent (dépense) = montant **négatif**
+- Une **entrée** d'argent (apport, remboursement reçu) = montant **positif**
+
+### Les types d'apports des associés
+
+| Type | Ce que c'est |
+|------|--------------|
+| **Apport initial** | Le capital de départ versé à la création (2022) |
+| **Apport périodique** | La cotisation régulière (200€/mois par associé) |
+| **Avance CCA** | Une avance de trésorerie : plutôt que de virer 200€/mois, un associé verse plusieurs mois d'avance d'un coup. La SCI lui "doit" cette somme, mais ne la rembourse pas en cash — la dette diminue mois après mois à mesure que les apports périodiques s'accumulent. |
+| **Appel de fonds exceptionnel** | Une contribution ponctuelle pour un besoin précis |
+
+### La ventilation
+
+Quand un seul paiement couvre plusieurs catégories (ex : une commande Bricomarché moitié cuisine, moitié jardin), on le découpe en plusieurs lignes — une par catégorie — dont la somme égale le paiement d'origine.
+
+### Le remboursement d'une avance
+
+Quand la SCI rembourse un associé qui a avancé des frais, la ligne est catégorisée selon **la nature de l'achat** (ex : des outils → Travaux/Outils), pas comme un simple transfert. Le prénom de l'associé dans le libellé signale que c'est un remboursement.
+
+### La taxonomie : 4 grandes familles
+
+Toutes les opérations se rangent dans 4 catégories de premier niveau (CAT 1), chacune déclinée en sous-catégories (CAT 2) puis en détails (CAT 3) :
+
+1. **Flux financiers associés** — apports, avances, appels de fonds
+2. **Achats et frais initiaux** — achat de la maison, frais de notaire, création SCI
+3. **Charges et frais courants** — taxes, assurances, consommables, abonnements, JPP
+4. **Travaux et investissements** — tous les chantiers de la maison, par pièce/thème
+
+> Taxonomie complète (toutes les CAT1/CAT2/CAT3) : https://docs.google.com/spreadsheets/d/1kkK7F3OxQs1lVUnBZqBpX1ZxABN38seb2wmsSmH5Sgo/edit?gid=1562314862#gid=1562314862
+
+## 1.5 Synthèse refonte juin 2026
+
+### Avant
+
+La comptabilité était tenue manuellement sur Excel Online, en double colonne encaissements/décaissements. C'était une comptabilité de gestion, chronophage et difficile à maintenir pour un non-comptable. Chaque mise à jour prenait des heures.
+
+### La refonte
+
+En juin 2026, trois changements majeurs :
+
+1. **Passage en comptabilité de trésorerie** sur Google Sheet, accessible de manière claire (en lecture seule) à tous les associés
+2. **Création d'une web app** qui automatise l'import bancaire, la catégorisation, les remboursements et la construction de budgets
+3. **Formalisation des règles** de déclaration sur Messenger pour alimenter l'automatisation
+
+### Ce qui a été migré
+
+Les exercices 2022 à 2025 ont été intégralement repris dans le Google Sheet. L'exercice 2026 est alimenté au fil de l'eau par la web app depuis juin 2026.
+
+### Ce qui n'a pas changé
+
+La banque (Shine), le principe des remboursements via Messenger, et la logique des comptes courants d'associés.`,
+  p2: `# PARTIE 2 — PLAYBOOK DU COMPTABLE
+
+> Les procédures pas à pas. Chaque action est décrite dans l'ordre, avec les 💡 tips qui évitent les pièges déjà rencontrés.
+
+## 2.A — Mettre à jour le journal (cycle trimestriel)
+
+C'est l'opération principale : intégrer les nouveaux mouvements bancaires dans le Journal. Compter 20–30 min.
+
+### Étape 1 — Exporter le relevé bancaire depuis Shine
+1. Se connecter à Shine
+2. Aller dans **Exporter les données → Générer un export comptable**
+3. Régler : type **Ponctuel**, format **CSV**, documents **Relevés bancaires** coché (Factures décoché)
+4. Choisir la **période ciblée** (mois ou trimestre) couvrant au minimum la période depuis le dernier arrêt
+5. Générer et télécharger
+
+![Écran Nouvel export comptable de Shine](export-shine.png)
+
+> 💡 L'export Shine utilise le point-virgule \`;\` comme séparateur. C'est le format attendu par l'app — ne pas le convertir.
+
+### Étape 2 — Ouvrir la web app et importer le CSV
+1. Ouvrir https://maxime-foltier-lmdjp.github.io/lmdjp-compta/
+2. Cliquer **Mettre à jour le journal**
+3. La date d'arrêt se pré-remplit automatiquement (dernière date du Journal) — la vérifier
+4. Importer le fichier CSV téléchargé
+
+> 💡 Si la date d'arrêt ne se charge pas, c'est que le Sheet n'est pas joignable : la saisir à la main et continuer.
+
+### Étape 3 — Coller le contexte Messenger et lancer l'analyse
+1. Ouvrir le groupe Messenger "Le gouffre financier"
+2. Copier les messages de la période concernée
+3. Les coller dans le champ prévu, ajouter les chantiers en cours si demandé
+4. Cliquer **Analyser**
+
+> 💡 Remonter le copier-coller jusqu'au **dernier message de remboursement des avances** : c'est la dernière date où la compta a été faite, donc le bon point de départ pour ne rien manquer.
+
+> 💡 Cette étape est la seule payante (elle appelle l'IA). Si le bouton est grisé, la clé API n'est pas configurée → ⚙️ Paramètres.
+> 💡 Sur un nouvel ordinateur, la clé API doit être re-saisie une fois (elle est stockée par navigateur).
+
+### Étape 4 — Traiter les remboursements
+1. Vérifier la liste des remboursements détectés
+2. Les demandes antérieures à la date butoir (dernier remboursement effectué) sont automatiquement écartées
+3. Cocher/décocher selon ce qui a réellement été viré
+
+> 💡 Une dépense sans nom de payeur est attribuée à Machi par défaut. Vérifier que c'est correct.
+> 💡 Une fois les remboursements effectués, ils apparaissent directement sur Shine : on peut alors réimporter dans la foulée pour obtenir la compta finale à date.
+
+### Étape 5 — Réviser les 3 sections
+1. Parcourir les opérations auto-catégorisées (règles), celles issues de l'IA, puis celles à catégoriser à la main
+2. Corriger les catégories CAT1/CAT2/CAT3 si besoin
+3. Compléter libellés et numéros de facture si utile
+
+> 💡 Pour les paiements couvrant plusieurs catégories, utiliser la ventilation (découper en plusieurs lignes dont la somme = le paiement d'origine).
+
+### Étape 6 — Exporter et coller dans le Journal
+1. Cliquer **Exporter le TSV**
+2. Ouvrir le fichier, tout sélectionner (Cmd+A), copier (Cmd+C)
+3. Dans le Journal, cliquer la première cellule vide de la colonne A
+4. Coller sans mise en forme (**Ctrl+Shift+V**)
+5. Menu **⚙️ SCI Tools → ▶ Appliquer après un collage**
+
+> 💡 Le "Appliquer après un collage" est indispensable : il reconfigure les listes déroulantes CAT2/CAT3. Sans lui, les cascades de catégories ne fonctionnent pas sur les nouvelles lignes.
+> 💡 Les couleurs, elles, s'appliquent automatiquement au collage.
+
+## 2.B — Construire ou mettre à jour un budget
+
+À faire après une grosse mise à jour du journal, ou en préparation d'AG. Compter 15–20 min.
+
+### Étape 1 — Vérifier les hypothèses
+1. Ouvrir la web app → **Construire un budget**
+2. Donner un nom et une période au budget
+3. Vérifier les 3 hypothèses : apports, achats initiaux, charges estimées (toutes éditables)
+4. Ajuster le taux d'inflation si besoin — le total des charges se recalcule
+
+> 💡 Charges et inflation sont liées : modifier l'une recalcule l'autre, pour que les deux restent cohérentes.
+> 💡 Le budget disponible travaux s'affiche en bas et se met à jour en temps réel.
+
+### Étape 2 — Pré-remplissage automatique
+1. L'app part du dernier budget et relève chaque ligne au maximum entre le budget précédent et le réel déjà consommé
+2. Les lignes 🟠 ont été ajustées à la hausse automatiquement
+3. Passer à l'ajustement
+
+### Étape 3 — Ajuster jusqu'à l'équilibre
+1. Pour chaque ligne, éditer le **Total** (enveloppe complète) ou la **Provision** (ce qui reste à dépenser au-delà du réel)
+2. Viser un solde à 0 (bandeau vert en haut)
+3. Le bouton Exporter ne s'active que quand le budget est équilibré
+
+> 💡 Total = Réel + Provision. Éditer l'un recalcule l'autre.
+> 💡 Impossible de descendre une ligne sous son réel déjà consommé (le champ flashe rouge et se remet au minimum).
+
+### Étape 4 — Exporter et coller dans l'Historisation
+1. Cliquer **Télécharger TSV**
+2. Ouvrir, tout copier
+3. Dans l'onglet **Historisation budgets**, cliquer la cellule du haut de la première colonne libre
+4. Coller sans mise en forme (**Ctrl+Shift+V**)
+5. Tirer la formule d'écart de la colonne du budget précédent sur la nouvelle colonne
+6. Renommer le nom du budget (ligne 2) en le préfixant d'une apostrophe (\`'Juillet 2026\`), puis ajouter manuellement ce nom à la liste déroulante F2 de l'onglet "Suivi budget travaux"
+
+> 💡 **L'apostrophe est cruciale** : sans elle, le Sheet transforme "Juillet 2026" en date (\`01/07/2026\`) et la liste "Budget à comparer" ne retrouve plus le budget. Vérifier la cellule de période en ligne 2 après chaque collage.
+> 💡 Pour éviter l'ajout manuel à F2, la liste peut être passée en "Menu déroulant (à partir d'une plage)" pointant sur la ligne 1 de l'Historisation — elle se remplit alors automatiquement.
+
+## 2.C — Actions ponctuelles métier
+
+### Modifier la taxonomie
+
+⚠️ La taxonomie est référencée à **trois endroits** qui doivent rester synchronisés :
+- l'onglet **Catégories** du Sheet (la source qui alimente les listes déroulantes)
+- les **formules SUMIFS** des onglets de synthèse, qui filtrent sur les libellés **exacts** (Trésorerie, Apports associés, Achats initiaux, Charges, Suivi budget travaux)
+- la constante **\`TAXONOMY\`** dans la web app (et les règles d'auto-catégorisation \`autoCatRow\`)
+
+L'impact dépend du type de changement. Trois cas.
+
+#### Cas 1 — Ajouter une nouvelle catégorie (CAT2 ou CAT3)
+1. Ajouter la ligne dans l'onglet **Catégories** (au bon niveau, sous la bonne CAT1/CAT2)
+2. Relancer **⚙️ SCI Tools → Initialiser le Journal** (met à jour les listes déroulantes)
+3. Si c'est une catégorie de travaux : ajouter la ligne correspondante dans **Suivi budget travaux** et **Historisation budgets** (sinon elle n'apparaîtra pas dans le suivi ni dans les budgets)
+4. Demander à Claude d'ajouter la catégorie dans la constante \`TAXONOMY\` de la web app, reverser le nouveau \`index.html\` sur GitHub (procédure en 3.A.3)
+
+> 💡 Un ajout est le cas le moins risqué : il ne casse aucune formule existante. Il faut juste penser à étendre les onglets de suivi si c'est une catégorie travaux.
+
+#### Cas 2 — Renommer une catégorie existante
+C'est le cas **le plus dangereux** : les formules SUMIFS filtrent sur le libellé en dur, donc un renommage les casse silencieusement (elles renvoient 0 sans erreur visible).
+1. Renommer dans l'onglet **Catégories**
+2. **Mettre à jour toutes les formules** qui référencent l'ancien libellé dans : Trésorerie, Apports associés, Achats initiaux, Charges, Suivi budget travaux. Utiliser Édition → Rechercher et remplacer (Cmd+H) sur tout le classeur, en remplaçant l'ancien libellé exact par le nouveau.
+3. Renommer aussi la ligne dans **Historisation budgets** (pour le matching des budgets)
+4. Relancer **Initialiser le Journal**
+5. Demander à Claude de mettre à jour \`TAXONOMY\` **et** les règles \`autoCatRow\` (si l'ancien libellé y était cité), reverser sur GitHub
+6. Reclasser les anciennes lignes du Journal qui portaient l'ancien libellé (sinon elles ne sont plus comptées)
+
+> 💡 Après un renommage, vérifier qu'aucun total n'est tombé à 0 de façon suspecte — c'est le signe d'une formule restée sur l'ancien libellé.
+
+#### Cas 3 — Supprimer ou fusionner une catégorie
+1. Reclasser dans le Journal toutes les lignes portant la catégorie à supprimer vers la catégorie cible
+2. Supprimer la ligne dans **Catégories**
+3. Supprimer/fusionner les lignes correspondantes dans **Suivi budget travaux** et **Historisation budgets**
+4. Vérifier les formules SUMIFS concernées
+5. Relancer **Initialiser le Journal**
+6. Demander à Claude de retirer la catégorie de \`TAXONOMY\`, reverser sur GitHub
+
+> 💡 La cohérence "CAT2 = somme de ses CAT3" doit rester vraie après une fusion : vérifier les sous-totaux dans Suivi budget travaux.
+
+### Ajouter un associé
+1. Ajouter sa CAT3 (son prénom/alias) dans les "Flux financiers associés" de l'onglet **Catégories**
+2. Vérifier l'onglet **Apports associés** : ajouter une colonne/ligne de suivi pour ce nouvel associé si la structure le demande (les formules SUMIFS y filtrent par nom)
+3. Relancer **⚙️ SCI Tools → Initialiser le Journal**
+4. Demander à Claude d'ajouter l'associé (nom + alias) dans la constante \`ASSOCIES\` de la web app — c'est ce qui permet de le détecter comme payeur dans l'analyse Messenger — puis reverser le \`index.html\` sur GitHub (procédure en 3.A.3)
+
+> 💡 Sans la mise à jour de \`ASSOCIES\` dans la web app, les avances du nouvel associé ne seront pas détectées automatiquement à l'étape 3 du journal.`,
+  p3: `# PARTIE 3 — MAINTENANCE ET DÉBUG
+
+> Cette partie a deux pans. **3.A** est pour Maxime (architecture, accès, procédure de correction de bug). **3.B** est le bloc à copier-coller à Claude le jour où une correction ou une évolution est nécessaire — il ne décrit pas l'app, il envoie Claude la comprendre à la source.
+
+---
+
+## 3.A — Pour Maxime
+
+### 3.A.1 Organisation de l'architecture
+
+Le système repose sur quatre briques qui communiquent dans un seul sens : **l'argent et les données vont de la banque vers le registre, jamais l'inverse**.
+
+\`\`\`
+   Shine (banque)                Messenger (déclarations)
+        │ export CSV                   │ copier-coller
+        ▼                              ▼
+   ┌─────────────────────────────────────────┐
+   │   Web app (GitHub Pages, index.html)     │
+   │   - importe, catégorise, calcule         │
+   │   - lit le Sheet (gviz, lecture seule)   │
+   │   - appelle l'IA (clé API, étape 3)      │
+   └─────────────────────────────────────────┘
+        │ export TSV (copier-coller manuel)
+        ▼
+   ┌─────────────────────────────────────────┐
+   │   Google Sheet "Compta LMDJP"            │
+   │   - Journal (registre central)           │
+   │   - onglets de synthèse (formules)       │
+   │   - Apps Script (cascades + couleurs)    │
+   └─────────────────────────────────────────┘
+\`\`\`
+
+**Où vit quoi :**
+
+| Élément | Emplacement | Accès |
+|---------|-------------|-------|
+| Code de la web app | Dépôt GitHub \`lmdjp-compta\` (compte \`maxime-foltier-lmdjp\`), fichier \`index.html\` | Public |
+| Web app en service | https://maxime-foltier-lmdjp.github.io/lmdjp-compta/ | Public |
+| Google Sheet | Drive (hors du dossier "SCI LMDJP"), raccourci dans le dossier | Lien public Lecteur ; Maxime propriétaire |
+| Apps Script | Dans le Sheet (Extensions → Apps Script) | Lié au Sheet |
+| Clé API Anthropic | localStorage du navigateur (\`lmdjp_api_key\`) | Maxime seul, par poste |
+| Dossier partagé | Drive "SCI LMDJP" | Associés Éditeurs |
+| Archives comptables (Excel 2022–2025) | Google Drive comptabilité, rubrique "Archives" | — |
+
+**Principe de versionnage de l'app** : chaque mise en ligne d'une nouvelle version de l'app passe par un commit GitHub, qui archive automatiquement la version précédente. Aucune copie datée manuelle à conserver.
+
+**Versionnage du Google Sheet** : Google Sheets enregistre automatiquement chaque modification dans un **historique des versions** (Fichier → Historique des versions → Afficher l'historique des versions), consultable et restaurable par le propriétaire et les éditeurs. Deux limites à connaître sur un compte gratuit : l'historique détaillé est conservé environ **30 jours ou 100 versions** (au premier atteint), au-delà Google fusionne et purge les versions intermédiaires pour gagner de la place — la version courante n'est jamais supprimée. Il n'existe pas de filtre par date dans l'historique (défilement manuel). Pour figer un état important (clôture d'exercice, gros budget), le réflexe est de **nommer la version** (Fichier → Historique des versions → Nommer la version actuelle) : les versions nommées sont préservées et faciles à retrouver.
+
+> 💡 Avant une opération risquée (renommage de catégorie, gros collage), nommer la version courante permet d'y revenir proprement en cas de problème.
+
+### 3.A.2 Tuto — Retrouver ou régénérer la clé API
+
+La clé API sert uniquement à l'analyse IA de la conversation Messenger (étape 3 du journal). Elle est stockée dans le navigateur, par poste.
+
+**Pour la saisir sur un poste/navigateur où elle manque :**
+1. Aller sur https://console.anthropic.com
+2. Se connecter (compte Anthropic sur lequel la facturation API est configurée)
+3. Menu **API Keys**
+4. Si une clé existe et a été notée : la réutiliser. Sinon : **Create Key**, lui donner un nom (ex. \`lmdjp-compta\`), **copier la clé immédiatement** (elle ne sera plus jamais affichée en entier)
+5. Dans la web app → ⚙️ Paramètres → coller la clé → fermer
+
+> 💡 La clé n'est jamais écrite dans le fichier \`index.html\` (page publique). Si elle fuite, la révoquer sur la console et en créer une nouvelle.
+
+### 3.A.3 Tuto — Du bug repéré à la version corrigée en ligne
+
+Le cycle complet, de la détection à la mise en ligne :
+
+1. **Repérer et documenter le bug.** Noter ce qui ne va pas, à quelle étape, et rassembler les preuves : capture d'écran, message d'erreur de la console (F12 → Console), et le fichier concerné (TSV exporté, export \`.xlsx\` du Sheet…).
+2. **Ouvrir une conversation avec Claude** et coller le **prompt universel de contexte** (section 3.B).
+3. **Fournir à Claude ce qu'il demande** en préambule (voir la liste dans le prompt : export \`.xlsx\`, script Apps Script, capture du bug…).
+4. **Décrire le bug** précisément à Claude une fois le contexte chargé.
+5. **Recevoir le \`index.html\` corrigé** que Claude aura validé (compilation JSX).
+6. **Publier sur GitHub** : dépôt \`lmdjp-compta\` → Add file → Upload files → déposer le nouveau \`index.html\` (il écrase l'ancien) → Commit changes. La nouvelle version est en ligne en ~1 min.
+7. **Vérifier** sur l'URL publique que le bug est corrigé (vider le cache / recharger si besoin).
+8. **🔁 Boucle d'actualisation** : si la correction a changé une convention, une structure ou introduit un nouveau piège, demander à Claude de **mettre à jour cette documentation** (notamment les pièges en 3.A et le prompt en 3.B) avant de clore la conversation.
+
+> Le même cycle vaut pour une **évolution** (nouvelle fonctionnalité) : prompt → contexte → spécification → développement → publication → **boucle d'actualisation de la doc**.
+
+---
+
+## 3.B — Pour Claude : prompt universel de contexte
+
+> Copier-coller l'intégralité du bloc ci-dessous dans une nouvelle conversation avec Claude, le jour où une correction ou une évolution est nécessaire. Il ne décrit pas l'app : il envoie Claude la lire à la source (toujours à jour) et lui donne le contexte que le code ne contient pas.
+
+\`\`\`
+Tu es mon assistant comptable et développeur pour la web app de comptabilité de notre SCI familiale "La Maison des Jean-Pierre" (LMDJP). On a construit cette app ensemble ; tu ne te souviens pas de nos sessions, donc ce message te remet tout le contexte. Lis-le en entier avant d'agir.
+
+═══ 1. PREMIER RÉFLEXE : VA LIRE LE CODE À LA SOURCE ═══
+Avant toute chose, récupère le code actuel de l'app (c'est la seule source de vérité, toujours à jour) :
+→ Fetch cette URL brute : https://raw.githubusercontent.com/maxime-foltier-lmdjp/lmdjp-compta/main/index.html
+C'est un fichier HTML autonome unique (React + Babel + PapaParse via CDN). Lis-le pour comprendre l'état réel de l'app avant de proposer quoi que ce soit. Ne te fie jamais à une description de mémoire : le code prime.
+
+═══ 2. CE QUE JE DOIS TE FOURNIR (demande-le moi en préambule si le sujet le nécessite) ═══
+Certaines pièces ne sont pas accessibles depuis le web ou ne sont pas fiables via fetch. Demande-moi explicitement, selon le besoin :
+- Un EXPORT .xlsx du Google Sheet : INDISPENSABLE pour analyser les formules ou les données réelles. NE JAMAIS te fier à un fetch du Google Sheet : il renvoie un cache périmé (on s'est fait piéger plusieurs fois). L'upload .xlsx est la seule source fiable.
+- Le SCRIPT APPS SCRIPT (copier-coller) : il vit dans l'éditeur Apps Script du Sheet, inaccessible par le web.
+- Le contexte d'un BUG précis : capture d'écran, message de la console (F12), TSV ou fichier problématique.
+
+═══ 3. QUI JE SUIS ET CE QU'EST LA SCI ═══
+Je suis Maxime (alias Machi), le comptable. La SCI réunit 6 associés autour d'une maison de campagne à Étais-la-Sauvin (89), créée en 2022, durée 11 ans (2022–2032).
+Les 6 associés et leurs alias : Machi (Maxime Foltier), Alex (Alexis Challande), Rac (Raphaël Benizio), Bachi (Hugo Bacry), Hecto (Hector Monin), Saum (Simon Goutal).
+
+═══ 4. ARCHITECTURE DE LA COMPTA ═══
+Comptabilité de TRÉSORERIE (flux réels, pas d'engagement). Chaîne de données à sens unique :
+Shine (banque) → export CSV → Web app (importe, catégorise, calcule) → export TSV → Google Sheet (registre + synthèses).
+Les déclarations d'avances de frais se font sur un groupe Messenger ("Le gouffre financier").
+- La web app est hébergée sur GitHub Pages (dépôt lmdjp-compta, fichier index.html), URL https://maxime-foltier-lmdjp.github.io/lmdjp-compta/
+- Le Google Sheet (ID 1kkK7F3OxQs1lVUnBZqBpX1ZxABN38seb2wmsSmH5Sgo) contient : Journal (registre central), Catégories (taxonomie CAT1/CAT2/CAT3), et des onglets de synthèse à formules SUMIFS (Trésorerie, Apports associés, Achats initiaux, Charges, JPP, Suivi budget travaux, Historisation budgets).
+- La clé API Anthropic est dans le localStorage du navigateur (jamais dans le fichier public) et ne sert qu'à l'analyse IA de la conversation Messenger.
+- Taxonomie à 4 CAT1 : Flux financiers associés, Achats et frais initiaux, Charges et frais courants, Travaux et investissements.
+
+═══ 5. CE QU'ON A CONSTRUIT (synthèse de nos sessions) ═══
+La web app a un écran d'accueil et deux grands parcours :
+- "Mettre à jour le journal" (6 étapes) : date d'arrêt (auto-fetch) → import CSV Shine (séparateur ;) → analyse IA du contexte Messenger → remboursements (logique de date butoir) → révision en 3 sections → export TSV 9 colonnes.
+- "Construire un budget" (4 étapes) : hypothèses (apports/achats/charges éditables, inflation liée aux charges en bidirectionnel) → pré-remplissage MAX(budget précédent, réel consommé) → ajustement avec DOUBLE champ Provision/Total (Total = Réel + Provision, contrôle différé au blur/Enter, plancher = réel) → export TSV format Historisation. Projection des charges sur 11 ans (réel révolu + projeté avec inflation composée et prorata de l'année en cours).
+Décisions et corrections importantes déjà actées :
+- Export budget : chaque CAT2 (header) = somme de ses CAT3 ARRONDIES ; grand total = somme de toutes les CAT3 ; L6 (budget estimatif) alignée sur L7 (total travaux). Ne jamais exporter la valeur affichée d'un header.
+- Lecture du Sheet via gviz : utiliser sheet=NomFeuille (PAS gid=). gviz peut mettre la 1ère ligne d'un range dans table.cols → prévoir un fallback (cas de l'onglet Charges).
+- Apps Script : la fonction doPost est du code mort (le push direct a été retiré). On peut la supprimer MAIS garder applyColorsForRange_ qui sert encore à onEdit lors d'un collage.
+
+═══ 6. PIÈGES CONNUS (pas forcément visibles dans le code) ═══
+- Périodes de budget : au collage du TSV, le Sheet transforme "Juillet 2026" en date. Préfixer d'une apostrophe ('Juillet 2026) dans la ligne 2 de l'Historisation ET dans la liste déroulante F2 de Suivi budget travaux, sinon le MATCH échoue.
+- Formules de Suivi budget travaux plafonnées à la colonne O : pour un budget au-delà, élargir la plage manuellement (géré à la main par Maxime).
+- Renommer une catégorie casse silencieusement les SUMIFS (filtrage sur libellé exact) dans tous les onglets de synthèse : faire un rechercher/remplacer global et reclasser les anciennes lignes du Journal.
+- Partage Drive : le fichier Compta est volontairement hors du dossier "SCI LMDJP" (associés Éditeurs du dossier), partagé en lien public Lecteur, avec un raccourci dans le dossier. Ne jamais le redéplacer dans le dossier.
+
+═══ 7. CONVENTIONS DE TRAVAIL (à respecter) ═══
+- Toujours valider le JSX avec Babel (@babel/preset-react) après chaque modification du HTML, avant de me rendre le fichier.
+- Pour analyser le Sheet : exiger un export .xlsx de ma part, recalculer les formules si besoin (LibreOffice), ne jamais se fier au cache d'un fetch Google Sheets.
+- Me présenter les fichiers via le mécanisme de présentation de fichiers, et rester concis.
+- Pour publier : je reverse moi-même le index.html corrigé sur GitHub (Add file → Upload files → Commit).
+- À la fin d'une correction ou évolution qui change une convention/structure/piège : me rappeler de mettre à jour la documentation (cette section incluse).
+
+Maintenant, commence par fetch le code à l'URL brute ci-dessus, puis demande-moi les pièces dont tu as besoin (export .xlsx, script Apps Script, contexte du bug). Ensuite seulement, on traitera ma demande.
+
+Une fois ma demande traitée, accompagne-moi jusqu'au bout : propose-moi de m'aider pour la mise en production (publication du index.html sur GitHub) et la phase de test (vérification que la correction/évolution fonctionne sur l'URL publique). Enfin, si ce qu'on a fait a changé une convention, une structure ou introduit un nouveau piège, propose-moi de faire évoluer ce prompt de contexte (et la documentation) en conséquence.
+\`\`\``,
+};
+
+// ─── DOCUMENTATION ──────────────────────────────────────────────────────────
+
+function mdToHtml(md) {
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = md.split('\n');
+  let html = '', i = 0;
+  const inline = t => esc(t)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" class="doc-img">')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[^"=])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  while (i < lines.length) {
+    let l = lines[i];
+    if (l.startsWith('```')) {
+      let code = []; i++;
+      while (i < lines.length && !lines[i].startsWith('```')) { code.push(lines[i]); i++; }
+      i++;
+      html += `<div class="doc-codeblock"><button class="doc-copy" data-code="${encodeURIComponent(code.join('\n'))}">Copier</button><pre>${esc(code.join('\n'))}</pre></div>`;
+      continue;
+    }
+    if (l.includes('|') && i+1 < lines.length && /^\s*\|?[\s:|-]+\|/.test(lines[i+1])) {
+      const head = l.split('|').filter(c=>c.trim()).map(c=>`<th>${inline(c.trim())}</th>`).join('');
+      i += 2; let body = '';
+      while (i < lines.length && lines[i].includes('|')) {
+        const cells = lines[i].split('|').filter(c=>c.trim()).map(c=>`<td>${inline(c.trim())}</td>`).join('');
+        body += `<tr>${cells}</tr>`; i++;
+      }
+      html += `<div class="doc-tablewrap"><table>${head?`<thead><tr>${head}</tr></thead>`:''}<tbody>${body}</tbody></table></div>`;
+      continue;
+    }
+    if (/^#{1,4}\s/.test(l)) { const lvl=l.match(/^#+/)[0].length; html+=`<h${lvl}>${inline(l.replace(/^#+\s/,''))}</h${lvl}>`; i++; continue; }
+    if (/^>\s?/.test(l)) {
+      let q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){q.push(lines[i].replace(/^>\s?/,''));i++;}
+      html+=`<blockquote>${q.map(inline).join('<br>')}</blockquote>`; continue;
+    }
+    if (/^[-*]\s/.test(l)) {
+      let items=[]; while(i<lines.length && /^[-*]\s/.test(lines[i])){items.push(lines[i].replace(/^[-*]\s/,''));i++;}
+      html+=`<ul>${items.map(x=>`<li>${inline(x)}</li>`).join('')}</ul>`; continue;
+    }
+    if (/^\d+\.\s/.test(l)) {
+      let items=[]; while(i<lines.length && /^\d+\.\s/.test(lines[i])){items.push(lines[i].replace(/^\d+\.\s/,''));i++;}
+      html+=`<ol>${items.map(x=>`<li>${inline(x)}</li>`).join('')}</ol>`; continue;
+    }
+    if (/^---+$/.test(l)) { html+='<hr>'; i++; continue; }
+    if (l.trim()==='') { i++; continue; }
+    html += `<p>${inline(l)}</p>`; i++;
+  }
+  return html;
+}
+
+function DocScreen({ onHome }) {
+  const [tab, setTab] = useState('p1');
+  const [copied, setCopied] = useState(null);
+  const ref = useRef(null);
+
+  const html = useMemo(() => mdToHtml(DOC_PARTS[tab]), [tab]);
+
+  // Délégation du clic sur les boutons Copier
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const onClick = (e) => {
+      const btn = e.target.closest('.doc-copy');
+      if (!btn) return;
+      const code = decodeURIComponent(btn.getAttribute('data-code'));
+      navigator.clipboard.writeText(code).then(()=>{
+        const old = btn.textContent;
+        btn.textContent = '✓ Copié';
+        setTimeout(()=>{ btn.textContent = old; }, 1500);
+      });
+    };
+    root.addEventListener('click', onClick);
+    return () => root.removeEventListener('click', onClick);
+  }, [html]);
+
+  const tabs = [
+    { id:'p1', label:'1 · Comprendre' },
+    { id:'p2', label:'2 · Playbook' },
+    { id:'p3', label:'3 · Maintenance' },
+  ];
+
+  return (
+    <div className="container" style={{maxWidth:860}}>
+      <div className="flex-between" style={{marginBottom:'1.25rem'}}>
+        <div className="flex" style={{gap:'.75rem',alignItems:'center'}}>
+          <button className="btn-ghost" onClick={onHome} style={{fontSize:13,padding:'6px 12px'}}>← Accueil</button>
+          <div>
+            <h1 style={{fontSize:17}}>Documentation</h1>
+            <div style={{fontSize:11,color:'var(--txt2)',marginTop:1}}>La Maison des JP — comptabilité</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="doc-tabs">
+        {tabs.map(t => (
+          <button key={t.id} className={`doc-tab${tab===t.id?' active':''}`}
+            onClick={()=>{ setTab(t.id); window.scrollTo(0,0); }}>{t.label}</button>
+        ))}
+      </div>
+
+      <div className="card doc-content" ref={ref}
+        dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
+  );
+}
+
 // ─── HOME SCREEN ──────────────────────────────────────────────────────────────
 
-function HomeScreen({ onJournal, onBudget, onSettings }) {
+function HomeScreen({ onJournal, onBudget, onDoc, onSettings }) {
   const SHEET_URL_JOURNAL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
 
   const cards = [
@@ -2542,7 +3107,10 @@ function HomeScreen({ onJournal, onBudget, onSettings }) {
       icon: '📖',
       title: 'Documentation',
       desc: "Guide d'utilisation de la comptabilité et de la web app",
-      active: false,
+      active: true,
+      action: onDoc,
+      cta: 'Consulter →',
+      ctaStyle: 'primary',
     },
   ];
 
@@ -2633,7 +3201,7 @@ function App() {
   // Home screen
   if (screen === 'home') return (
     <>
-      <HomeScreen onJournal={startJournal} onBudget={()=>setScreen('budget')} onSettings={() => setShowSettings(true)}/>
+      <HomeScreen onJournal={startJournal} onBudget={()=>setScreen('budget')} onDoc={()=>setScreen('doc')} onSettings={() => setShowSettings(true)}/>
       {showSettings && <SettingsModal onClose={()=>setShowSettings(false)}/>}
     </>
   );
@@ -2654,6 +3222,9 @@ function App() {
       <BudgetFlow onHome={()=>setScreen('home')}/>
     </div>
   );
+
+  // Documentation
+  if (screen === 'doc') return <DocScreen onHome={()=>setScreen('home')}/>;
 
   // Journal funnel
   return (
